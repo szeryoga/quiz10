@@ -1,76 +1,57 @@
 import logging
-import smtplib
-from email.message import EmailMessage
 
 import httpx
 
-from app.core.config import get_settings
+from app.models.flow import SurveySubmission
 from app.models.settings import AppSettings
-from app.models.submission import UserSubmission
-from app.models.topic import Topic
 
 
 logger = logging.getLogger(__name__)
 
 
-def build_admin_message(submission: UserSubmission, topic: Topic) -> str:
-    answers_block = "\n".join(
-        f"{index}. {item['question_text']}\nОтвет: {item['answer']}"
-        for index, item in enumerate(submission.answers, start=1)
+def build_admin_message(submission: SurveySubmission) -> str:
+    answers_block = "\n\n".join(
+        (
+            f"{index}. {item['question_text']}\n"
+            f"Ответ пользователя: {', '.join(option['text'] for option in item['selected_options'])}"
+        )
+        for index, item in enumerate(submission.stage_one_answers, start=1)
     )
     user_label = " ".join(filter(None, [submission.first_name, submission.last_name])).strip() or "Без имени"
     return (
-        f"Новая заявка Quiz10\n\n"
-        f"Тема: {topic.title}\n"
+        f"Новый запрос из Quiz10\n\n"
+        f"Пользователь просит помочь с решением ключевой задачи.\n\n"
         f"Submission ID: {submission.id}\n"
         f"Telegram ID: {submission.telegram_id or '-'}\n"
         f"Username: {submission.username or '-'}\n"
         f"Имя: {user_label}\n"
-        f"Статус анализа: {submission.status.value}\n\n"
-        f"Ответы:\n{answers_block}\n\n"
-        f"Анализ ИИ:\n{submission.ai_response or 'Нет'}"
+        f"Баллы: {submission.total_score}\n"
+        f"Вывод: {submission.result_title}\n"
+        f"Ключевая задача: {submission.key_task}\n\n"
+        f"Вопросы и ответы:\n{answers_block}"
     )
 
 
-async def send_notifications(settings_row: AppSettings, submission: UserSubmission, topic: Topic) -> None:
-    message = build_admin_message(submission, topic)
-    await send_telegram(settings_row, message)
-    send_email(settings_row, message, f"Quiz10 submission #{submission.id}")
+async def send_notifications(settings_row: AppSettings, submission: SurveySubmission) -> str:
+    message = build_admin_message(submission)
+    return await send_telegram(settings_row, message)
 
 
-async def send_telegram(settings_row: AppSettings, message: str) -> None:
+async def send_telegram(settings_row: AppSettings, message: str) -> str:
+    from app.core.config import get_settings
+
     settings = get_settings()
     if not settings_row.admin_telegram_chat_id or not settings.telegram_bot_token:
-        return
+        raise RuntimeError("У администратора не настроен Telegram для получения сообщений")
 
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            await client.post(
+            response = await client.post(
                 f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
                 json={"chat_id": settings_row.admin_telegram_chat_id, "text": message},
             )
+            response.raise_for_status()
+        return settings_row.admin_telegram_chat_id
     except Exception as exc:  # noqa: BLE001
         logger.exception("Telegram notification failed: %s", exc)
-
-
-def send_email(settings_row: AppSettings, message: str, subject: str) -> None:
-    settings = get_settings()
-    if not settings_row.admin_email:
-        return
-    if not settings.smtp_host or not settings.smtp_from:
-        return
-
-    email = EmailMessage()
-    email["Subject"] = subject
-    email["From"] = settings.smtp_from
-    email["To"] = settings_row.admin_email
-    email.set_content(message)
-
-    try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as server:
-            server.starttls()
-            if settings.smtp_user:
-                server.login(settings.smtp_user, settings.smtp_password)
-            server.send_message(email)
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Email notification failed: %s", exc)
+        raise RuntimeError("Не удалось отправить сообщение в Telegram") from exc

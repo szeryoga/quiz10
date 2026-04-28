@@ -9,6 +9,7 @@ from app.models.open_event import AppOpenEvent
 from app.schemas.flow import PublicFlowRead, SurveySubmissionCreate, SurveySubmissionResponse
 from app.schemas.open_event import AppOpenRequest, AppOpenResponse
 from app.services.flow_service import get_flow_config
+from app.services.notify import send_notifications
 from app.services.settings_service import get_or_create_settings
 
 
@@ -78,7 +79,7 @@ def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> A
 
 
 @router.post("/submit", response_model=SurveySubmissionResponse)
-def submit_answers(payload: SurveySubmissionCreate, db: DBSession) -> SurveySubmissionResponse:
+async def submit_answers(payload: SurveySubmissionCreate, db: DBSession) -> SurveySubmissionResponse:
     _, stage_one_questions, result_ranges = get_flow_config(db)
     questions_map = {question.id: question for question in stage_one_questions}
 
@@ -131,44 +132,6 @@ def submit_answers(payload: SurveySubmissionCreate, db: DBSession) -> SurveySubm
         )
 
     result_range = find_result_range(result_ranges, total_score)
-    expected_stage_two_questions = {item.id: item for item in result_range.open_questions}
-    stage_two_snapshot: list[dict] = []
-
-    if payload.continued_to_stage_two:
-        if len(payload.stage_two_answers) != len(result_range.open_questions):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Нужно ответить на все вопросы второго этапа",
-            )
-
-        seen_open_questions: set[int] = set()
-        for answer in payload.stage_two_answers:
-            question = expected_stage_two_questions.get(answer.question_id)
-            if not question:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный вопрос второго этапа")
-            if answer.question_id in seen_open_questions:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Вопрос второго этапа продублирован",
-                )
-            seen_open_questions.add(answer.question_id)
-            if not answer.answer.strip():
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Ответы второго этапа не должны быть пустыми",
-                )
-            stage_two_snapshot.append(
-                {
-                    "question_id": question.id,
-                    "question_text": question.text,
-                    "answer": answer.answer.strip(),
-                }
-            )
-    elif payload.stage_two_answers:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ответы второго этапа можно отправлять только после подтверждения перехода",
-        )
 
     submission = SurveySubmission(
         telegram_id=payload.telegram_id,
@@ -176,20 +139,28 @@ def submit_answers(payload: SurveySubmissionCreate, db: DBSession) -> SurveySubm
         first_name=payload.first_name,
         last_name=payload.last_name,
         total_score=total_score,
-        continued_to_stage_two=payload.continued_to_stage_two,
+        continued_to_stage_two=payload.request_help,
         result_range_id=result_range.id,
         result_title=result_range.title,
         result_summary=result_range.summary,
         key_task=result_range.key_task,
         stage_one_answers=stage_one_snapshot,
-        stage_two_answers=stage_two_snapshot,
+        stage_two_answers=[],
     )
     db.add(submission)
     db.commit()
+    settings_row = get_or_create_settings(db)
+    sent_to = ""
+    if payload.request_help:
+        try:
+            sent_to = await send_notifications(settings_row, submission)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
     return SurveySubmissionResponse(
         success=True,
         total_score=total_score,
         result_title=result_range.title,
-        continued_to_stage_two=payload.continued_to_stage_two,
+        request_help=payload.request_help,
+        sent_to=sent_to,
     )

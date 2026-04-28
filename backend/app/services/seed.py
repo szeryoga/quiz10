@@ -134,10 +134,14 @@ def seed_initial_data(db: Session) -> None:
                 id=1,
                 app_title="Насколько ты сейчас в контакте с собой (и своим состоянием)?",
                 app_description="Ответь на несколько вопросов. В конце ты увидишь вывод, ключевую задачу и сможешь продолжить исследование глубже.",
+                send_message_title="Посылка сообщения",
+                send_message_text="Отправь мне результаты твоего теста, я посмотрю их и свяжусь с тобой",
+                sent_message_title="Сообщение послано",
+                sent_message_text="Спасибо! Я получила твои ответы, скоро свяжусь с тобой",
                 final_title="Спасибо за ответы!",
                 thank_you_text="Спасибо за ответы! Ты сделал(а) важный шаг к лучшему пониманию своего состояния.",
                 final_button_text="Пройти заново",
-                user_daily_open_limit=3,
+                user_daily_open_limit=100,
                 global_daily_open_limit=100,
                 xai_api_key=settings_env.xai_api_key or None,
                 xai_model=settings_env.xai_model or "grok-2-latest",
@@ -163,11 +167,26 @@ def seed_initial_data(db: Session) -> None:
                 "Спасибо за ответы! Ты сделал(а) важный шаг к лучшему пониманию своего состояния."
             )
             changed = True
+        if not getattr(settings_row, "send_message_title", None):
+            settings_row.send_message_title = "Посылка сообщения"
+            changed = True
+        if not getattr(settings_row, "send_message_text", None):
+            settings_row.send_message_text = "Отправь мне результаты твоего теста, я посмотрю их и свяжусь с тобой"
+            changed = True
+        if not getattr(settings_row, "sent_message_title", None):
+            settings_row.sent_message_title = "Сообщение послано"
+            changed = True
+        if not getattr(settings_row, "sent_message_text", None):
+            settings_row.sent_message_text = "Спасибо! Я получила твои ответы, скоро свяжусь с тобой"
+            changed = True
         if not getattr(settings_row, "final_title", None):
             settings_row.final_title = "Спасибо за ответы!"
             changed = True
         if not getattr(settings_row, "final_button_text", None):
             settings_row.final_button_text = "Пройти заново"
+            changed = True
+        if settings_row.user_daily_open_limit == 3:
+            settings_row.user_daily_open_limit = 100
             changed = True
         if changed:
             db.commit()

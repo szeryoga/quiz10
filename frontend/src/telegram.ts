@@ -6,6 +6,7 @@ declare global {
       WebApp?: {
         ready?: () => void;
         expand?: () => void;
+        close?: () => void;
         initDataUnsafe?: {
           user?: TelegramUser;
         };
@@ -21,4 +22,8 @@ export function prepareTelegram() {
 
 export function getTelegramUser(): TelegramUser | null {
   return window.Telegram?.WebApp?.initDataUnsafe?.user ?? null;
+}
+
+export function closeTelegramApp() {
+  window.Telegram?.WebApp?.close?.();
 }

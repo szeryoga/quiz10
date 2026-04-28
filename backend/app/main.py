@@ -55,11 +55,55 @@ def ensure_schema_compatibility() -> None:
         connection.execute(
             text(
                 """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS send_message_title VARCHAR(255) DEFAULT 'Посылка сообщения'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS send_message_text TEXT
+                DEFAULT 'Отправь мне результаты твоего теста, я посмотрю их и свяжусь с тобой'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS sent_message_title VARCHAR(255) DEFAULT 'Сообщение послано'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS sent_message_text TEXT
+                DEFAULT 'Спасибо! Я получила твои ответы, скоро свяжусь с тобой'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
                 UPDATE app_settings
                 SET app_title = COALESCE(NULLIF(app_title, ''), '10 вопросов'),
                     app_description = COALESCE(
                         NULLIF(app_description, ''),
                         'Выберите психологическую тему и ответьте на 10 вопросов.'
+                    ),
+                    send_message_title = COALESCE(NULLIF(send_message_title, ''), 'Посылка сообщения'),
+                    send_message_text = COALESCE(
+                        NULLIF(send_message_text, ''),
+                        'Отправь мне результаты твоего теста, я посмотрю их и свяжусь с тобой'
+                    ),
+                    sent_message_title = COALESCE(NULLIF(sent_message_title, ''), 'Сообщение послано'),
+                    sent_message_text = COALESCE(
+                        NULLIF(sent_message_text, ''),
+                        'Спасибо! Я получила твои ответы, скоро свяжусь с тобой'
                     ),
                     final_title = COALESCE(NULLIF(final_title, ''), 'Спасибо за ответы!'),
                     final_button_text = COALESCE(NULLIF(final_button_text, ''), 'Пройти заново')

@@ -42,15 +42,14 @@ export const api = {
     username?: string | null;
     first_name?: string | null;
     last_name?: string | null;
-    continued_to_stage_two: boolean;
+    request_help: boolean;
     stage_one_answers: { question_id: number; selected_option_ids: number[] }[];
-    stage_two_answers: { question_id: number; answer: string }[];
   }) =>
-    request<{ success: boolean; total_score: number; result_title: string; continued_to_stage_two: boolean }>(
+    request<{ success: boolean; total_score: number; result_title: string; request_help: boolean; sent_to: string }>(
       "/public/submit",
       {
-      method: "POST",
-      body: JSON.stringify(payload),
+        method: "POST",
+        body: JSON.stringify(payload),
       }
     ),
 };

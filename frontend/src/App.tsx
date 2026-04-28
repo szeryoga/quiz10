@@ -4,7 +4,7 @@ import { api } from "./api";
 import { getTelegramUser, prepareTelegram } from "./telegram";
 import type { PublicFlow, ResultRange, StageOneQuestion } from "./types";
 
-type AppStage = "intro" | "stage1" | "result" | "stage2" | "done";
+type AppStage = "intro" | "stage1" | "result" | "send-message" | "sent-message" | "done";
 
 function findResultRange(resultRanges: ResultRange[], totalScore: number) {
   return resultRanges.find((item) => totalScore >= item.min_score && totalScore <= item.max_score) ?? null;
@@ -14,12 +14,11 @@ export default function App() {
   const [flow, setFlow] = useState<PublicFlow | null>(null);
   const [stage, setStage] = useState<AppStage>("intro");
   const [stageOneIndex, setStageOneIndex] = useState(0);
-  const [stageTwoIndex, setStageTwoIndex] = useState(0);
   const [stageOneAnswers, setStageOneAnswers] = useState<Record<number, number[]>>({});
-  const [stageTwoAnswers, setStageTwoAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [sentTo, setSentTo] = useState("");
 
   useEffect(() => {
     prepareTelegram();
@@ -49,11 +48,6 @@ export default function App() {
   }, [flow?.settings.app_title]);
 
   const currentStageOneQuestion = flow?.stage_one_questions[stageOneIndex] ?? null;
-  const currentStageTwoQuestion = useMemo(() => {
-    const result = getComputedResult();
-    return result?.resultRange.open_questions[stageTwoIndex] ?? null;
-  }, [flow, stageOneAnswers, stageTwoIndex]);
-
   function getComputedResult() {
     if (!flow) return null;
     const totalScore = flow.stage_one_questions.reduce((sum, question) => {
@@ -72,10 +66,9 @@ export default function App() {
   function resetFlow() {
     setStage("intro");
     setStageOneIndex(0);
-    setStageTwoIndex(0);
     setStageOneAnswers({});
-    setStageTwoAnswers({});
     setError(null);
+    setSentTo("");
   }
 
   function updateSingleChoice(questionId: number, optionId: number) {
@@ -97,32 +90,35 @@ export default function App() {
     return (stageOneAnswers[question.id] ?? []).length > 0;
   }
 
-  async function submitFlow(continuedToStageTwo: boolean) {
+  async function submitFlow() {
     if (!flow || !computedResult) return;
     const telegramUser = getTelegramUser();
+    if (!telegramUser) {
+      const message = "Посылка сообщения возможна только из Телеграм";
+      setError(message);
+      window.alert(message);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      await api.submit({
+      const response = await api.submit({
         telegram_id: telegramUser?.id ? String(telegramUser.id) : null,
         username: telegramUser?.username ?? null,
         first_name: telegramUser?.first_name ?? null,
         last_name: telegramUser?.last_name ?? null,
-        continued_to_stage_two: continuedToStageTwo,
+        request_help: true,
         stage_one_answers: flow.stage_one_questions.map((question) => ({
           question_id: question.id,
           selected_option_ids: stageOneAnswers[question.id] ?? [],
         })),
-        stage_two_answers: continuedToStageTwo
-          ? computedResult.resultRange.open_questions.map((question) => ({
-              question_id: question.id,
-              answer: stageTwoAnswers[question.id] ?? "",
-            }))
-          : [],
       });
-      setStage("done");
+      setSentTo(response.sent_to);
+      setStage("sent-message");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Ошибка отправки");
+      const message = nextError instanceof Error ? nextError.message : "Ошибка отправки";
+      setError(message);
+      window.alert(message);
     } finally {
       setSubmitting(false);
     }
@@ -228,10 +224,7 @@ export default function App() {
                 type="button"
                 className="primary-button"
                 disabled={submitting}
-                onClick={() => {
-                  setStageTwoIndex(0);
-                  setStage("stage2");
-                }}
+                onClick={() => setStage("send-message")}
               >
                 Да
               </button>
@@ -239,7 +232,7 @@ export default function App() {
                 type="button"
                 className="ghost-button"
                 disabled={submitting}
-                onClick={() => void submitFlow(false)}
+                onClick={() => setStage("done")}
               >
                 Нет
               </button>
@@ -247,52 +240,39 @@ export default function App() {
           </div>
         ) : null}
 
-        {!loading && flow && stage === "stage2" && computedResult && currentStageTwoQuestion ? (
+        {!loading && flow && stage === "send-message" ? (
           <div className="stack">
-            <div className="progress-row">
-              <span>
-                Вопрос {stageTwoIndex + 1} из {computedResult.resultRange.open_questions.length}
-              </span>
-              <button type="button" className="link-button" onClick={() => setStage("result")}>
-                Назад
-              </button>
-            </div>
-
-            <div className="question-card">
-              <p>{currentStageTwoQuestion.text}</p>
-            </div>
-
-            <textarea
-              value={stageTwoAnswers[currentStageTwoQuestion.id] ?? ""}
-              onChange={(event) =>
-                setStageTwoAnswers((prev) => ({
-                  ...prev,
-                  [currentStageTwoQuestion.id]: event.target.value,
-                }))
-              }
-              rows={7}
-              placeholder="Напишите ваш ответ..."
-            />
-
-            {stageTwoIndex < computedResult.resultRange.open_questions.length - 1 ? (
+            <p className="result-title">{flow.settings.send_message_title}</p>
+            <p className="thank-you">{flow.settings.send_message_text}</p>
+            <div className="button-split">
               <button
                 type="button"
                 className="primary-button"
-                disabled={!(stageTwoAnswers[currentStageTwoQuestion.id] ?? "").trim()}
-                onClick={() => setStageTwoIndex((value) => value + 1)}
+                disabled={submitting}
+                onClick={() => void submitFlow()}
               >
-                Далее
+                Да
               </button>
-            ) : (
               <button
                 type="button"
-                className="primary-button"
-                disabled={!(stageTwoAnswers[currentStageTwoQuestion.id] ?? "").trim() || submitting}
-                onClick={() => void submitFlow(true)}
+                className="ghost-button"
+                disabled={submitting}
+                onClick={() => setStage("done")}
               >
-                {submitting ? "Отправка..." : "Отправить ответы"}
+                Нет
               </button>
-            )}
+            </div>
+          </div>
+        ) : null}
+
+        {!loading && flow && stage === "sent-message" ? (
+          <div className="stack">
+            <p className="result-title">{flow.settings.sent_message_title}</p>
+            <p className="sent-meta">сообщение послано {sentTo}</p>
+            <p className="thank-you">{flow.settings.sent_message_text}</p>
+            <button type="button" className="primary-button" onClick={() => setStage("done")}>
+              ОК
+            </button>
           </div>
         ) : null}
 

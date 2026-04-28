@@ -70,7 +70,7 @@ class ResultRangeInput(BaseModel):
     min_score: int
     max_score: int
     sort_order: int = 0
-    open_questions: list[ResultOpenQuestionInput]
+    open_questions: list[ResultOpenQuestionInput] = []
 
 
 class FlowConfigRead(BaseModel):
@@ -100,16 +100,16 @@ class SurveySubmissionCreate(BaseModel):
     username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
-    continued_to_stage_two: bool = False
+    request_help: bool = True
     stage_one_answers: list[StageOneSubmissionAnswerInput]
-    stage_two_answers: list[StageTwoSubmissionAnswerInput] = []
 
 
 class SurveySubmissionResponse(BaseModel):
     success: bool
     total_score: int
     result_title: str
-    continued_to_stage_two: bool
+    request_help: bool
+    sent_to: str
 
 
 class SurveySubmissionRead(ORMModel):

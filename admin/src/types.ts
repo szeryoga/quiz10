@@ -12,11 +12,6 @@ export type StageOneQuestion = {
   options: StageOneOption[];
 };
 
-export type ResultOpenQuestion = {
-  text: string;
-  sort_order: number;
-};
-
 export type ResultRange = {
   id?: number;
   title: string;
@@ -25,13 +20,16 @@ export type ResultRange = {
   min_score: number;
   max_score: number;
   sort_order: number;
-  open_questions: ResultOpenQuestion[];
 };
 
 export type FlowSettings = {
   id?: number;
   app_title: string;
   app_description: string;
+  send_message_title: string;
+  send_message_text: string;
+  sent_message_title: string;
+  sent_message_text: string;
   final_title: string;
   thank_you_text: string;
   final_button_text: string;
@@ -67,11 +65,6 @@ export type Submission = {
     question_text: string;
     question_type: string;
     selected_options: { id: number; text: string; score: number }[];
-  }[];
-  stage_two_answers: {
-    question_id: number;
-    question_text: string;
-    answer: string;
   }[];
   created_at: string;
   updated_at: string;

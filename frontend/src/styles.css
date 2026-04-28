@@ -200,6 +200,12 @@ textarea {
   color: #31445a;
 }
 
+.sent-meta {
+  margin: -2px 0 0;
+  font-size: 13px;
+  color: #6f8091;
+}
+
 .result-title {
   margin: 0 0 8px;
   font-size: 22px;

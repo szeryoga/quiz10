@@ -77,9 +77,12 @@ function ProtectedLayout() {
         <nav>
           <Link to="/submissions">Ответы</Link>
           <Link to="/intro">Первая страница</Link>
-          <Link to="/stage1">Этап 1</Link>
-          <Link to="/results">Диапазоны результатов</Link>
+          <Link to="/stage1">Вопросы</Link>
+          <Link to="/results">Выводы</Link>
+          <Link to="/send-message">Посылка сообщения</Link>
+          <Link to="/sent-message">Сообщение послано</Link>
           <Link to="/final">Последняя страница</Link>
+          <Link to="/settings">Настройки</Link>
         </nav>
         <button
           type="button"
@@ -99,7 +102,10 @@ function ProtectedLayout() {
           <Route path="/intro" element={<IntroPage />} />
           <Route path="/stage1" element={<StageOnePage />} />
           <Route path="/results" element={<ResultRangesPage />} />
+          <Route path="/send-message" element={<SendMessagePage />} />
+          <Route path="/sent-message" element={<SentMessagePage />} />
           <Route path="/final" element={<FinalPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/submissions" replace />} />
         </Routes>
       </section>
@@ -147,7 +153,7 @@ function SubmissionsPage() {
               <th>Результат</th>
               <th>Баллы</th>
               <th>Пользователь</th>
-              <th>Этап 2</th>
+              <th>Запросил помощь</th>
               <th>Дата</th>
             </tr>
           </thead>
@@ -192,7 +198,7 @@ function SubmissionDetailsPage() {
             <br />
             <strong>Баллы:</strong> {item.total_score}
             <br />
-            <strong>Этап 2:</strong> {item.continued_to_stage_two ? "Да" : "Нет"}
+            <strong>Запросил помощь:</strong> {item.continued_to_stage_two ? "Да" : "Нет"}
             <br />
             <strong>Пользователь:</strong> {item.first_name || "-"} {item.last_name || ""}
             <br />
@@ -214,20 +220,6 @@ function SubmissionDetailsPage() {
                 <p>{answer.selected_options.map((option) => `${option.text} (${option.score})`).join(", ")}</p>
               </div>
             ))}
-          </div>
-
-          <div className="panel-card">
-            <h3>Этап 2</h3>
-            {item.stage_two_answers.length ? (
-              item.stage_two_answers.map((answer, index) => (
-                <div key={`${answer.question_id}-${index}`} className="answer-block">
-                  <strong>{answer.question_text}</strong>
-                  <p>{answer.answer}</p>
-                </div>
-              ))
-            ) : (
-              <p>Пользователь не переходил ко второму этапу.</p>
-            )}
           </div>
         </div>
       ) : null}
@@ -280,7 +272,7 @@ function StageOnePage() {
 
   return (
     <div className="page">
-      <SaveHeader title="Этап 1" onSave={save} />
+      <SaveHeader title="Вопросы" onSave={save} />
       <StatusBanners error={error} saved={saved} />
       {flow ? (
         <div className="panel-card form-grid">
@@ -440,7 +432,7 @@ function ResultRangesPage() {
 
   return (
     <div className="page">
-      <SaveHeader title="Диапазоны результатов" onSave={save} />
+      <SaveHeader title="Выводы" onSave={save} />
       <StatusBanners error={error} saved={saved} />
       {flow ? (
         <div className="panel-card form-grid">
@@ -460,7 +452,6 @@ function ResultRangesPage() {
                       min_score: 0,
                       max_score: 0,
                       sort_order: flow.result_ranges.length + 1,
-                      open_questions: [{ text: "Новый открытый вопрос", sort_order: 1 }],
                     },
                   ],
                 })
@@ -534,67 +525,6 @@ function ResultRangesPage() {
                     }
                   />
                 </div>
-
-                <div className="stack">
-                  <div className="header-row">
-                    <strong>Открытые вопросы</strong>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateRange(rangeIndex, (current) => ({
-                          ...current,
-                          open_questions: [
-                            ...current.open_questions,
-                            { text: "Новый открытый вопрос", sort_order: current.open_questions.length + 1 },
-                          ],
-                        }))
-                      }
-                    >
-                      Добавить вопрос
-                    </button>
-                  </div>
-
-                  {range.open_questions.map((question, questionIndex) => (
-                    <div key={questionIndex} className="inline-grid open-question-grid">
-                      <textarea
-                        rows={2}
-                        value={question.text}
-                        onChange={(e) =>
-                          updateRange(rangeIndex, (current) => ({
-                            ...current,
-                            open_questions: current.open_questions.map((item, itemIndex) =>
-                              itemIndex === questionIndex ? { ...item, text: e.target.value } : item
-                            ),
-                          }))
-                        }
-                      />
-                      <input
-                        type="number"
-                        value={question.sort_order}
-                        onChange={(e) =>
-                          updateRange(rangeIndex, (current) => ({
-                            ...current,
-                            open_questions: current.open_questions.map((item, itemIndex) =>
-                              itemIndex === questionIndex ? { ...item, sort_order: Number(e.target.value) } : item
-                            ),
-                          }))
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="danger-button"
-                        onClick={() =>
-                          updateRange(rangeIndex, (current) => ({
-                            ...current,
-                            open_questions: current.open_questions.filter((_, itemIndex) => itemIndex !== questionIndex),
-                          }))
-                        }
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           ))}
@@ -634,6 +564,127 @@ function FinalPage() {
               value={flow.settings.final_button_text}
               onChange={(e) =>
                 setFlow({ ...flow, settings: { ...flow.settings, final_button_text: e.target.value } })
+              }
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SendMessagePage() {
+  const { flow, setFlow, error, saved, save } = useFlowEditorData();
+
+  return (
+    <div className="page">
+      <SaveHeader title="Посылка сообщения" onSave={save} />
+      <StatusBanners error={error} saved={saved} />
+      {flow ? (
+        <div className="panel-card form-grid">
+          <label>
+            Заголовок
+            <input
+              value={flow.settings.send_message_title}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, send_message_title: e.target.value } })
+              }
+            />
+          </label>
+          <label>
+            Текст
+            <textarea
+              rows={4}
+              value={flow.settings.send_message_text}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, send_message_text: e.target.value } })
+              }
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SentMessagePage() {
+  const { flow, setFlow, error, saved, save } = useFlowEditorData();
+
+  return (
+    <div className="page">
+      <SaveHeader title="Сообщение послано" onSave={save} />
+      <StatusBanners error={error} saved={saved} />
+      {flow ? (
+        <div className="panel-card form-grid">
+          <label>
+            Заголовок
+            <input
+              value={flow.settings.sent_message_title}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, sent_message_title: e.target.value } })
+              }
+            />
+          </label>
+          <label>
+            Текст
+            <textarea
+              rows={4}
+              value={flow.settings.sent_message_text}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, sent_message_text: e.target.value } })
+              }
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SettingsPage() {
+  const { flow, setFlow, error, saved, save } = useFlowEditorData();
+
+  return (
+    <div className="page">
+      <SaveHeader title="Настройки" onSave={save} />
+      <StatusBanners error={error} saved={saved} />
+      {flow ? (
+        <div className="panel-card form-grid">
+          <label>
+            Telegram администратора
+            <input
+              value={flow.settings.admin_telegram_chat_id || ""}
+              onChange={(e) =>
+                setFlow({
+                  ...flow,
+                  settings: { ...flow.settings, admin_telegram_chat_id: e.target.value || null },
+                })
+              }
+            />
+          </label>
+          <label>
+            Лимит открытий на одного пользователя в сутки
+            <input
+              type="number"
+              value={flow.settings.user_daily_open_limit}
+              onChange={(e) =>
+                setFlow({
+                  ...flow,
+                  settings: { ...flow.settings, user_daily_open_limit: Number(e.target.value) },
+                })
+              }
+            />
+          </label>
+          <label>
+            Глобальный лимит открытий в сутки
+            <input
+              type="number"
+              value={flow.settings.global_daily_open_limit}
+              onChange={(e) =>
+                setFlow({
+                  ...flow,
+                  settings: { ...flow.settings, global_daily_open_limit: Number(e.target.value) },
+                })
               }
             />
           </label>
