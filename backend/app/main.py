@@ -39,12 +39,30 @@ def ensure_schema_compatibility() -> None:
         connection.execute(
             text(
                 """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS final_title VARCHAR(255) DEFAULT 'Спасибо за ответы!'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS final_button_text VARCHAR(255) DEFAULT 'Пройти заново'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
                 UPDATE app_settings
                 SET app_title = COALESCE(NULLIF(app_title, ''), '10 вопросов'),
                     app_description = COALESCE(
                         NULLIF(app_description, ''),
                         'Выберите психологическую тему и ответьте на 10 вопросов.'
-                    )
+                    ),
+                    final_title = COALESCE(NULLIF(final_title, ''), 'Спасибо за ответы!'),
+                    final_button_text = COALESCE(NULLIF(final_button_text, ''), 'Пройти заново')
                 """
             )
         )

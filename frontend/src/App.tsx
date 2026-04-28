@@ -166,22 +166,26 @@ export default function App() {
               </small>
             </div>
 
-            <div className="stack">
+            <div className="stack" role="group" aria-label={currentStageOneQuestion.text}>
               {currentStageOneQuestion.options.map((option) => {
                 const selected = (stageOneAnswers[currentStageOneQuestion.id] ?? []).includes(option.id);
                 return (
-                  <button
+                  <label
                     key={option.id}
-                    type="button"
                     className={`option-card${selected ? " selected" : ""}`}
-                    onClick={() =>
-                      currentStageOneQuestion.question_type === "single_choice"
-                        ? updateSingleChoice(currentStageOneQuestion.id, option.id)
-                        : updateMultiChoice(currentStageOneQuestion.id, option.id)
-                    }
                   >
+                    <input
+                      type={currentStageOneQuestion.question_type === "single_choice" ? "radio" : "checkbox"}
+                      name={`question-${currentStageOneQuestion.id}`}
+                      checked={selected}
+                      onChange={() =>
+                        currentStageOneQuestion.question_type === "single_choice"
+                          ? updateSingleChoice(currentStageOneQuestion.id, option.id)
+                          : updateMultiChoice(currentStageOneQuestion.id, option.id)
+                      }
+                    />
                     <span>{option.text}</span>
-                  </button>
+                  </label>
                 );
               })}
             </div>
@@ -216,21 +220,10 @@ export default function App() {
             </div>
 
             <div className="task-card">
-              <strong>Ключевая задача</strong>
               <p>{computedResult.resultRange.key_task}</p>
             </div>
 
-            <p className="muted">Хочешь продолжить и ответить ещё на несколько вопросов по этой теме?</p>
-
             <div className="button-split">
-              <button
-                type="button"
-                className="ghost-button"
-                disabled={submitting}
-                onClick={() => void submitFlow(false)}
-              >
-                Нет
-              </button>
               <button
                 type="button"
                 className="primary-button"
@@ -241,6 +234,14 @@ export default function App() {
                 }}
               >
                 Да
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={submitting}
+                onClick={() => void submitFlow(false)}
+              >
+                Нет
               </button>
             </div>
           </div>
@@ -297,9 +298,10 @@ export default function App() {
 
         {!loading && flow && stage === "done" ? (
           <div className="stack">
+            <p className="result-title">{flow.settings.final_title}</p>
             <p className="thank-you">{flow.settings.thank_you_text}</p>
             <button type="button" className="primary-button" onClick={resetFlow}>
-              Пройти заново
+              {flow.settings.final_button_text}
             </button>
           </div>
         ) : null}

@@ -41,7 +41,9 @@ export type FlowSettings = {
   id: number;
   app_title: string;
   app_description: string;
+  final_title: string;
   thank_you_text: string;
+  final_button_text: string;
   admin_email: string | null;
   admin_telegram_chat_id: string | null;
   user_daily_open_limit: number;

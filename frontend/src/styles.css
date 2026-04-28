@@ -84,10 +84,30 @@ h1 {
   line-height: 1.45;
 }
 
+.option-card {
+  grid-template-columns: 22px 1fr;
+  align-items: start;
+}
+
+.option-card input {
+  margin: 2px 0 0;
+  inline-size: 18px;
+  block-size: 18px;
+  accent-color: #0c8a75;
+}
+
+.option-card span {
+  line-height: 1.5;
+}
+
 .option-card.selected {
   background: linear-gradient(135deg, #0c8a75, #0b6b65);
   color: #f8fffb;
   border-color: transparent;
+}
+
+.option-card.selected input {
+  accent-color: #f6da9e;
 }
 
 .progress-row {

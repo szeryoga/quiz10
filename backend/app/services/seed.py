@@ -134,7 +134,9 @@ def seed_initial_data(db: Session) -> None:
                 id=1,
                 app_title="Насколько ты сейчас в контакте с собой (и своим состоянием)?",
                 app_description="Ответь на несколько вопросов. В конце ты увидишь вывод, ключевую задачу и сможешь продолжить исследование глубже.",
+                final_title="Спасибо за ответы!",
                 thank_you_text="Спасибо за ответы! Ты сделал(а) важный шаг к лучшему пониманию своего состояния.",
+                final_button_text="Пройти заново",
                 user_daily_open_limit=3,
                 global_daily_open_limit=100,
                 xai_api_key=settings_env.xai_api_key or None,
@@ -160,6 +162,12 @@ def seed_initial_data(db: Session) -> None:
             settings_row.thank_you_text = (
                 "Спасибо за ответы! Ты сделал(а) важный шаг к лучшему пониманию своего состояния."
             )
+            changed = True
+        if not getattr(settings_row, "final_title", None):
+            settings_row.final_title = "Спасибо за ответы!"
+            changed = True
+        if not getattr(settings_row, "final_button_text", None):
+            settings_row.final_button_text = "Пройти заново"
             changed = True
         if changed:
             db.commit()
