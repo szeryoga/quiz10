@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     telegram_bot_token: str = Field(default="")
 
     smtp_host: str = Field(default="")
-    smtp_port: int = Field(default=587)
+    smtp_port: int | None = Field(default=587)
     smtp_user: str = Field(default="")
     smtp_password: str = Field(default="")
     smtp_from: str = Field(default="")
@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @field_validator("smtp_port", mode="before")
+    @classmethod
+    def normalize_smtp_port(cls, value: object) -> object:
+        if value == "":
+            return 587
+        return value
 
 
 @lru_cache
