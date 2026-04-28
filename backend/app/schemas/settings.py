@@ -5,6 +5,8 @@ from app.schemas.common import TimestampRead
 
 class AppSettingsRead(TimestampRead):
     id: int
+    app_title: str
+    app_description: str
     admin_email: EmailStr | None
     admin_telegram_chat_id: str | None
     thank_you_text: str
@@ -15,6 +17,8 @@ class AppSettingsRead(TimestampRead):
 
 
 class AppSettingsUpdate(BaseModel):
+    app_title: str = "10 вопросов"
+    app_description: str = "Выберите психологическую тему и ответьте на 10 вопросов."
     admin_email: EmailStr | None = None
     admin_telegram_chat_id: str | None = None
     thank_you_text: str
@@ -25,4 +29,6 @@ class AppSettingsUpdate(BaseModel):
 
 
 class PublicSettingsRead(BaseModel):
+    app_title: str
+    app_description: str
     thank_you_text: str

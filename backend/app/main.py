@@ -16,9 +16,43 @@ from app.services.seed import seed_initial_data
 settings_obj = get_settings()
 
 
+def ensure_schema_compatibility() -> None:
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS app_title VARCHAR(255) DEFAULT '10 вопросов'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS app_description TEXT
+                DEFAULT 'Выберите психологическую тему и ответьте на 10 вопросов.'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                UPDATE app_settings
+                SET app_title = COALESCE(NULLIF(app_title, ''), '10 вопросов'),
+                    app_description = COALESCE(
+                        NULLIF(app_description, ''),
+                        'Выберите психологическую тему и ответьте на 10 вопросов.'
+                    )
+                """
+            )
+        )
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_schema_compatibility()
     db = SessionLocal()
     try:
         seed_initial_data(db)

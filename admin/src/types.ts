@@ -31,6 +31,8 @@ export type Submission = {
 
 export type Settings = {
   id: number;
+  app_title: string;
+  app_description: string;
   admin_email: string | null;
   admin_telegram_chat_id: string | null;
   thank_you_text: string;

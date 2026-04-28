@@ -9,6 +9,10 @@ class AppSettings(TimestampMixin, Base):
     __tablename__ = "app_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    app_title: Mapped[str] = mapped_column(String(255), default="10 вопросов")
+    app_description: Mapped[str] = mapped_column(
+        Text, default="Выберите психологическую тему и ответьте на 10 вопросов."
+    )
     admin_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     admin_telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     thank_you_text: Mapped[str] = mapped_column(

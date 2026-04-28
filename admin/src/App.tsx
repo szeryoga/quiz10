@@ -394,6 +394,8 @@ function SettingsPage() {
     if (!settings) return;
     try {
       const next = await api.updateSettings({
+        app_title: settings.app_title,
+        app_description: settings.app_description,
         admin_email: settings.admin_email,
         admin_telegram_chat_id: settings.admin_telegram_chat_id,
         thank_you_text: settings.thank_you_text,
@@ -417,6 +419,21 @@ function SettingsPage() {
       {saved ? <div className="success-box">Сохранено</div> : null}
       {settings ? (
         <div className="panel-card form-grid">
+          <label>
+            Заголовок приложения
+            <input
+              value={settings.app_title}
+              onChange={(e) => setSettings({ ...settings, app_title: e.target.value })}
+            />
+          </label>
+          <label>
+            Описание на первом экране
+            <textarea
+              rows={3}
+              value={settings.app_description}
+              onChange={(e) => setSettings({ ...settings, app_description: e.target.value })}
+            />
+          </label>
           <label>
             Email администратора
             <input

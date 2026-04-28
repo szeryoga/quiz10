@@ -22,5 +22,7 @@ export type Topic = {
 };
 
 export type PublicSettings = {
+  app_title: string;
+  app_description: string;
   thank_you_text: string;
 };

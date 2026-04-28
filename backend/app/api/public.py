@@ -39,7 +39,11 @@ def get_public_topics(db: DBSession) -> list[Topic]:
 @router.get("/settings", response_model=PublicSettingsRead)
 def get_public_settings(db: DBSession) -> PublicSettingsRead:
     settings = get_or_create_settings(db)
-    return PublicSettingsRead(thank_you_text=settings.thank_you_text)
+    return PublicSettingsRead(
+        app_title=settings.app_title,
+        app_description=settings.app_description,
+        thank_you_text=settings.thank_you_text,
+    )
 
 
 @router.post("/open", response_model=AppOpenResponse)

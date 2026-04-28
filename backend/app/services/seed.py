@@ -65,6 +65,8 @@ def seed_initial_data(db: Session) -> None:
         db.add(
             AppSettings(
                 id=1,
+                app_title="10 вопросов",
+                app_description="Выберите психологическую тему и ответьте на 10 вопросов.",
                 thank_you_text="Спасибо за доверие. Мы получили ваши ответы и скоро внимательно их изучим.",
                 user_daily_open_limit=3,
                 global_daily_open_limit=100,

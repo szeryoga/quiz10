@@ -51,8 +51,14 @@ export default function App() {
     if (selectedTopic) {
       return selectedTopic.title;
     }
-    return "10 вопросов";
-  }, [selectedTopic, stage]);
+    return settings?.app_title || "10 вопросов";
+  }, [selectedTopic, settings?.app_title, stage]);
+
+  useEffect(() => {
+    if (settings?.app_title) {
+      document.title = settings.app_title;
+    }
+  }, [settings?.app_title]);
 
   function resetFlow() {
     setSelectedTopic(null);
@@ -100,7 +106,9 @@ export default function App() {
 
         {!loading && stage === "topics" ? (
           <div className="stack">
-            <p className="muted">Выберите психологическую тему и ответьте на 10 вопросов.</p>
+            <p className="muted">
+              {settings?.app_description || "Выберите психологическую тему и ответьте на 10 вопросов."}
+            </p>
             {topics.map((topic) => (
               <button
                 key={topic.id}
