@@ -1,4 +1,4 @@
-import type { PublicSettings, Topic } from "./types";
+import type { PublicFlow } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
@@ -28,8 +28,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  getTopics: () => request<Topic[]>("/public/topics"),
-  getSettings: () => request<PublicSettings>("/public/settings"),
+  getFlow: () => request<PublicFlow>("/public/flow"),
   registerOpen: (telegramId?: string | null) =>
     request<{ success: boolean; user_daily_remaining: number; global_daily_remaining: number }>(
       "/public/open",
@@ -39,15 +38,19 @@ export const api = {
       }
     ),
   submit: (payload: {
-    topic_id: number;
     telegram_id?: string | null;
     username?: string | null;
     first_name?: string | null;
     last_name?: string | null;
-    answers: { question_id: number; question_text: string; answer: string }[];
+    continued_to_stage_two: boolean;
+    stage_one_answers: { question_id: number; selected_option_ids: number[] }[];
+    stage_two_answers: { question_id: number; answer: string }[];
   }) =>
-    request<{ success: boolean; status: string }>("/public/submit", {
+    request<{ success: boolean; total_score: number; result_title: string; continued_to_stage_two: boolean }>(
+      "/public/submit",
+      {
       method: "POST",
       body: JSON.stringify(payload),
-    }),
+      }
+    ),
 };

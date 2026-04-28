@@ -3,21 +3,8 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 
 import { api, clearToken, getToken, setToken } from "./api";
-import type { Settings, Submission, Topic } from "./types";
+import type { FlowConfig, ResultRange, StageOneQuestion, Submission } from "./types";
 import "./styles.css";
-
-function translateSubmissionStatus(status: Submission["status"]) {
-  switch (status) {
-    case "pending":
-      return "В обработке";
-    case "analyzed":
-      return "Проанализировано";
-    case "failed":
-      return "Ошибка";
-    default:
-      return status;
-  }
-}
 
 function LoginPage() {
   const [password, setPasswordValue] = useState("");
@@ -63,8 +50,7 @@ function ProtectedLayout() {
         <h2>Quiz10</h2>
         <nav>
           <Link to="/submissions">Ответы</Link>
-          <Link to="/topics">Темы</Link>
-          <Link to="/settings">Настройки</Link>
+          <Link to="/flow">Сценарий</Link>
         </nav>
         <button
           type="button"
@@ -81,9 +67,7 @@ function ProtectedLayout() {
         <Routes>
           <Route path="/submissions" element={<SubmissionsPage />} />
           <Route path="/submissions/:id" element={<SubmissionDetailsPage />} />
-          <Route path="/topics" element={<TopicsPage />} />
-          <Route path="/topics/:id" element={<TopicEditorPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/flow" element={<FlowEditorPage />} />
           <Route path="*" element={<Navigate to="/submissions" replace />} />
         </Routes>
       </section>
@@ -108,9 +92,10 @@ function SubmissionsPage() {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Тема</th>
-              <th>Статус</th>
+              <th>Результат</th>
+              <th>Баллы</th>
               <th>Пользователь</th>
+              <th>Этап 2</th>
               <th>Дата</th>
             </tr>
           </thead>
@@ -120,9 +105,10 @@ function SubmissionsPage() {
                 <td>
                   <Link to={`/submissions/${item.id}`}>{item.id}</Link>
                 </td>
-                <td>{item.topic_title}</td>
-                <td>{translateSubmissionStatus(item.status)}</td>
+                <td>{item.result_title}</td>
+                <td>{item.total_score}</td>
                 <td>{item.username || item.first_name || item.telegram_id || "-"}</td>
+                <td>{item.continued_to_stage_two ? "Да" : "Нет"}</td>
                 <td>{new Date(item.created_at).toLocaleString()}</td>
               </tr>
             ))}
@@ -150,26 +136,48 @@ function SubmissionDetailsPage() {
       {item ? (
         <div className="stack">
           <div className="panel-card">
-            <strong>Тема:</strong> {item.topic_title}
+            <strong>Результат:</strong> {item.result_title}
+            <br />
+            <strong>Баллы:</strong> {item.total_score}
+            <br />
+            <strong>Этап 2:</strong> {item.continued_to_stage_two ? "Да" : "Нет"}
             <br />
             <strong>Пользователь:</strong> {item.first_name || "-"} {item.last_name || ""}
             <br />
             <strong>Telegram:</strong> {item.telegram_id || "-"} / {item.username || "-"}
-            <br />
-            <strong>Статус:</strong> {translateSubmissionStatus(item.status)}
           </div>
+
           <div className="panel-card">
-            <h3>Ответы</h3>
-            {item.answers.map((answer, index) => (
+            <h3>Вывод</h3>
+            <p className="pre">{item.result_summary}</p>
+            <h3>Ключевая задача</h3>
+            <p className="pre">{item.key_task}</p>
+          </div>
+
+          <div className="panel-card">
+            <h3>Этап 1</h3>
+            {item.stage_one_answers.map((answer, index) => (
               <div key={`${answer.question_id}-${index}`} className="answer-block">
                 <strong>{answer.question_text}</strong>
-                <p>{answer.answer}</p>
+                <p>
+                  {answer.selected_options.map((option) => `${option.text} (${option.score})`).join(", ")}
+                </p>
               </div>
             ))}
           </div>
+
           <div className="panel-card">
-            <h3>Анализ ИИ</h3>
-            <p className="pre">{item.ai_response || "Нет"}</p>
+            <h3>Этап 2</h3>
+            {item.stage_two_answers.length ? (
+              item.stage_two_answers.map((answer, index) => (
+                <div key={`${answer.question_id}-${index}`} className="answer-block">
+                  <strong>{answer.question_text}</strong>
+                  <p>{answer.answer}</p>
+                </div>
+              ))
+            ) : (
+              <p>Пользователь не переходил ко второму этапу.</p>
+            )}
           </div>
         </div>
       ) : null}
@@ -177,234 +185,20 @@ function SubmissionDetailsPage() {
   );
 }
 
-function TopicsPage() {
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-
-  async function load() {
-    try {
-      setTopics(await api.getTopics());
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Ошибка загрузки");
-    }
-  }
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  async function createTopic() {
-    const topic = await api.createTopic({
-      title: "Новая тема",
-      description: "",
-      is_active: false,
-      sort_order: topics.length + 1,
-    });
-    navigate(`/topics/${topic.id}`);
-  }
-
-  return (
-    <div className="page">
-      <div className="header-row">
-        <h1>Темы</h1>
-        <button type="button" onClick={() => void createTopic()}>
-          Новая тема
-        </button>
-      </div>
-      {error ? <div className="error-box">{error}</div> : null}
-      <div className="stack">
-        {topics.map((topic) => (
-          <div key={topic.id} className="panel-card clickable" onClick={() => navigate(`/topics/${topic.id}`)}>
-            <strong>{topic.title}</strong>
-            <span>{topic.is_active ? "Активна" : "Скрыта"}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TopicEditorPage() {
-  const params = useParams();
-  const navigate = useNavigate();
-  const [topic, setTopic] = useState<Topic | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function load() {
-    if (!params.id) return;
-    try {
-      setTopic(await api.getTopic(Number(params.id)));
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Ошибка загрузки");
-    }
-  }
-
-  useEffect(() => {
-    void load();
-  }, [params.id]);
-
-  async function saveTopic() {
-    if (!topic) return;
-    await api.updateTopic(topic.id, {
-      title: topic.title,
-      description: topic.description,
-      is_active: topic.is_active,
-      sort_order: topic.sort_order,
-    });
-    await load();
-  }
-
-  async function addQuestion() {
-    if (!topic) return;
-    await api.createQuestion({
-      topic_id: topic.id,
-      text: "Новый вопрос",
-      sort_order: topic.questions.length + 1,
-    });
-    await load();
-  }
-
-  async function saveQuestion(questionId: number, text: string, sortOrder: number) {
-    await api.updateQuestion(questionId, { text, sort_order: sortOrder });
-    await load();
-  }
-
-  async function removeQuestion(questionId: number) {
-    await api.deleteQuestion(questionId);
-    await load();
-  }
-
-  async function removeTopic() {
-    if (!topic) return;
-    await api.deleteTopic(topic.id);
-    navigate("/topics");
-  }
-
-  return (
-    <div className="page">
-      <div className="header-row">
-        <h1>Редактор темы</h1>
-        <button type="button" className="danger-button" onClick={() => void removeTopic()}>
-          Удалить тему
-        </button>
-      </div>
-      {error ? <div className="error-box">{error}</div> : null}
-      {topic ? (
-        <div className="stack">
-          <div className="panel-card form-grid">
-            <label>
-              Название
-              <input value={topic.title} onChange={(e) => setTopic({ ...topic, title: e.target.value })} />
-            </label>
-            <label>
-              Описание
-              <textarea
-                rows={4}
-                value={topic.description || ""}
-                onChange={(e) => setTopic({ ...topic, description: e.target.value })}
-              />
-            </label>
-            <label>
-              Порядок сортировки
-              <input
-                type="number"
-                value={topic.sort_order}
-                onChange={(e) => setTopic({ ...topic, sort_order: Number(e.target.value) })}
-              />
-            </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={topic.is_active}
-                onChange={(e) => setTopic({ ...topic, is_active: e.target.checked })}
-              />
-              Показывать на первом экране
-            </label>
-            <button type="button" onClick={() => void saveTopic()}>
-              Сохранить тему
-            </button>
-          </div>
-
-          <div className="header-row">
-            <h2>Вопросы</h2>
-            <button type="button" onClick={() => void addQuestion()}>
-              Добавить вопрос
-            </button>
-          </div>
-
-          {topic.questions.map((question) => (
-            <QuestionEditor
-              key={question.id}
-              question={question}
-              onSave={saveQuestion}
-              onDelete={removeQuestion}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function QuestionEditor({
-  question,
-  onSave,
-  onDelete,
-}: {
-  question: Topic["questions"][number];
-  onSave: (id: number, text: string, sortOrder: number) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-}) {
-  const [text, setText] = useState(question.text);
-  const [sortOrder, setSortOrder] = useState(question.sort_order);
-
-  return (
-    <div className="panel-card form-grid">
-      <label>
-        Вопрос
-        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
-      </label>
-      <label>
-        Порядок сортировки
-        <input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} />
-      </label>
-      <div className="button-row">
-        <button type="button" onClick={() => void onSave(question.id, text, sortOrder)}>
-          Сохранить
-        </button>
-        <button type="button" className="danger-button" onClick={() => void onDelete(question.id)}>
-          Удалить
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SettingsPage() {
-  const [settings, setSettings] = useState<Settings | null>(null);
+function FlowEditorPage() {
+  const [flow, setFlow] = useState<FlowConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    api.getSettings().then(setSettings).catch((err: Error) => setError(err.message));
+    api.getFlow().then(setFlow).catch((err: Error) => setError(err.message));
   }, []);
 
   async function save() {
-    if (!settings) return;
+    if (!flow) return;
     try {
-      const next = await api.updateSettings({
-        app_title: settings.app_title,
-        app_description: settings.app_description,
-        admin_email: settings.admin_email,
-        admin_telegram_chat_id: settings.admin_telegram_chat_id,
-        thank_you_text: settings.thank_you_text,
-        user_daily_open_limit: settings.user_daily_open_limit,
-        global_daily_open_limit: settings.global_daily_open_limit,
-        xai_api_key: settings.xai_api_key,
-        xai_model: settings.xai_model,
-      });
-      setSettings(next);
+      const next = await api.updateFlow(flow);
+      setFlow(next);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1500);
     } catch (nextError) {
@@ -412,87 +206,378 @@ function SettingsPage() {
     }
   }
 
+  function updateQuestion(index: number, updater: (question: StageOneQuestion) => StageOneQuestion) {
+    if (!flow) return;
+    setFlow({
+      ...flow,
+      stage_one_questions: flow.stage_one_questions.map((question, questionIndex) =>
+        questionIndex === index ? updater(question) : question
+      ),
+    });
+  }
+
+  function updateRange(index: number, updater: (range: ResultRange) => ResultRange) {
+    if (!flow) return;
+    setFlow({
+      ...flow,
+      result_ranges: flow.result_ranges.map((range, rangeIndex) => (rangeIndex === index ? updater(range) : range)),
+    });
+  }
+
   return (
     <div className="page">
-      <h1>Настройки</h1>
+      <div className="header-row">
+        <h1>Сценарий</h1>
+        <button type="button" onClick={() => void save()}>
+          Сохранить всё
+        </button>
+      </div>
       {error ? <div className="error-box">{error}</div> : null}
       {saved ? <div className="success-box">Сохранено</div> : null}
-      {settings ? (
-        <div className="panel-card form-grid">
-          <label>
-            Заголовок приложения
-            <input
-              value={settings.app_title}
-              onChange={(e) => setSettings({ ...settings, app_title: e.target.value })}
-            />
-          </label>
-          <label>
-            Описание на первом экране
-            <textarea
-              rows={3}
-              value={settings.app_description}
-              onChange={(e) => setSettings({ ...settings, app_description: e.target.value })}
-            />
-          </label>
-          <label>
-            Email администратора
-            <input
-              value={settings.admin_email || ""}
-              onChange={(e) => setSettings({ ...settings, admin_email: e.target.value || null })}
-            />
-          </label>
-          <label>
-            Telegram chat ID администратора
-            <input
-              value={settings.admin_telegram_chat_id || ""}
-              onChange={(e) => setSettings({ ...settings, admin_telegram_chat_id: e.target.value || null })}
-            />
-          </label>
-          <label>
-            Текст после отправки
-            <textarea
-              rows={5}
-              value={settings.thank_you_text}
-              onChange={(e) => setSettings({ ...settings, thank_you_text: e.target.value })}
-            />
-          </label>
-          <label>
-            Лимит открытий на пользователя в день
-            <input
-              type="number"
-              value={settings.user_daily_open_limit}
-              onChange={(e) =>
-                setSettings({ ...settings, user_daily_open_limit: Number(e.target.value) })
-              }
-            />
-          </label>
-          <label>
-            Глобальный лимит открытий в день
-            <input
-              type="number"
-              value={settings.global_daily_open_limit}
-              onChange={(e) =>
-                setSettings({ ...settings, global_daily_open_limit: Number(e.target.value) })
-              }
-            />
-          </label>
-          <label>
-            xAI API key
-            <input
-              value={settings.xai_api_key || ""}
-              onChange={(e) => setSettings({ ...settings, xai_api_key: e.target.value || null })}
-            />
-          </label>
-          <label>
-            Модель xAI
-            <input
-              value={settings.xai_model}
-              onChange={(e) => setSettings({ ...settings, xai_model: e.target.value })}
-            />
-          </label>
-          <button type="button" onClick={() => void save()}>
-            Сохранить настройки
-          </button>
+
+      {flow ? (
+        <div className="stack">
+          <div className="panel-card form-grid">
+            <h2>Первая страница</h2>
+            <label>
+              Заголовок
+              <input
+                value={flow.settings.app_title}
+                onChange={(e) =>
+                  setFlow({
+                    ...flow,
+                    settings: { ...flow.settings, app_title: e.target.value },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Текст
+              <textarea
+                rows={3}
+                value={flow.settings.app_description}
+                onChange={(e) =>
+                  setFlow({
+                    ...flow,
+                    settings: { ...flow.settings, app_description: e.target.value },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Текст финального экрана
+              <textarea
+                rows={3}
+                value={flow.settings.thank_you_text}
+                onChange={(e) =>
+                  setFlow({
+                    ...flow,
+                    settings: { ...flow.settings, thank_you_text: e.target.value },
+                  })
+                }
+              />
+            </label>
+          </div>
+
+          <div className="panel-card form-grid">
+            <div className="header-row">
+              <h2>Этап 1</h2>
+              <button
+                type="button"
+                onClick={() =>
+                  setFlow({
+                    ...flow,
+                    stage_one_questions: [
+                      ...flow.stage_one_questions,
+                      {
+                        text: "Новый вопрос",
+                        question_type: "single_choice",
+                        sort_order: flow.stage_one_questions.length + 1,
+                        options: [{ text: "Новый вариант", score: 0, sort_order: 1 }],
+                      },
+                    ],
+                  })
+                }
+              >
+                Добавить вопрос
+              </button>
+            </div>
+
+            {flow.stage_one_questions.map((question, questionIndex) => (
+              <div key={questionIndex} className="nested-card">
+                <div className="header-row">
+                  <strong>Вопрос {questionIndex + 1}</strong>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() =>
+                      setFlow({
+                        ...flow,
+                        stage_one_questions: flow.stage_one_questions.filter((_, index) => index !== questionIndex),
+                      })
+                    }
+                  >
+                    Удалить
+                  </button>
+                </div>
+                <div className="form-grid">
+                  <label>
+                    Текст вопроса
+                    <textarea
+                      rows={3}
+                      value={question.text}
+                      onChange={(e) => updateQuestion(questionIndex, (current) => ({ ...current, text: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Тип вопроса
+                    <select
+                      value={question.question_type}
+                      onChange={(e) =>
+                        updateQuestion(questionIndex, (current) => ({
+                          ...current,
+                          question_type: e.target.value as StageOneQuestion["question_type"],
+                        }))
+                      }
+                    >
+                      <option value="single_choice">Один вариант</option>
+                      <option value="multi_choice">Несколько вариантов</option>
+                    </select>
+                  </label>
+                  <label>
+                    Порядок сортировки
+                    <input
+                      type="number"
+                      value={question.sort_order}
+                      onChange={(e) =>
+                        updateQuestion(questionIndex, (current) => ({
+                          ...current,
+                          sort_order: Number(e.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <div className="stack">
+                    <div className="header-row">
+                      <strong>Варианты ответов</strong>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateQuestion(questionIndex, (current) => ({
+                            ...current,
+                            options: [
+                              ...current.options,
+                              { text: "Новый вариант", score: 0, sort_order: current.options.length + 1 },
+                            ],
+                          }))
+                        }
+                      >
+                        Добавить вариант
+                      </button>
+                    </div>
+
+                    {question.options.map((option, optionIndex) => (
+                      <div key={optionIndex} className="inline-grid">
+                        <input
+                          value={option.text}
+                          onChange={(e) =>
+                            updateQuestion(questionIndex, (current) => ({
+                              ...current,
+                              options: current.options.map((item, itemIndex) =>
+                                itemIndex === optionIndex ? { ...item, text: e.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <input
+                          type="number"
+                          value={option.score}
+                          onChange={(e) =>
+                            updateQuestion(questionIndex, (current) => ({
+                              ...current,
+                              options: current.options.map((item, itemIndex) =>
+                                itemIndex === optionIndex ? { ...item, score: Number(e.target.value) } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="danger-button"
+                          onClick={() =>
+                            updateQuestion(questionIndex, (current) => ({
+                              ...current,
+                              options: current.options.filter((_, itemIndex) => itemIndex !== optionIndex),
+                            }))
+                          }
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="panel-card form-grid">
+            <div className="header-row">
+              <h2>Диапазоны результатов</h2>
+              <button
+                type="button"
+                onClick={() =>
+                  setFlow({
+                    ...flow,
+                    result_ranges: [
+                      ...flow.result_ranges,
+                      {
+                        title: "Новый диапазон",
+                        summary: "Описание вывода",
+                        key_task: "Ключевая задача",
+                        min_score: 0,
+                        max_score: 0,
+                        sort_order: flow.result_ranges.length + 1,
+                        open_questions: [{ text: "Новый открытый вопрос", sort_order: 1 }],
+                      },
+                    ],
+                  })
+                }
+              >
+                Добавить диапазон
+              </button>
+            </div>
+
+            {flow.result_ranges.map((range, rangeIndex) => (
+              <div key={rangeIndex} className="nested-card">
+                <div className="header-row">
+                  <strong>Диапазон {rangeIndex + 1}</strong>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() =>
+                      setFlow({
+                        ...flow,
+                        result_ranges: flow.result_ranges.filter((_, index) => index !== rangeIndex),
+                      })
+                    }
+                  >
+                    Удалить
+                  </button>
+                </div>
+                <div className="form-grid">
+                  <label>
+                    Заголовок вывода
+                    <input
+                      value={range.title}
+                      onChange={(e) => updateRange(rangeIndex, (current) => ({ ...current, title: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Текст вывода
+                    <textarea
+                      rows={4}
+                      value={range.summary}
+                      onChange={(e) => updateRange(rangeIndex, (current) => ({ ...current, summary: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Ключевая задача
+                    <textarea
+                      rows={3}
+                      value={range.key_task}
+                      onChange={(e) => updateRange(rangeIndex, (current) => ({ ...current, key_task: e.target.value }))}
+                    />
+                  </label>
+                  <div className="inline-grid">
+                    <input
+                      type="number"
+                      value={range.min_score}
+                      onChange={(e) =>
+                        updateRange(rangeIndex, (current) => ({ ...current, min_score: Number(e.target.value) }))
+                      }
+                    />
+                    <input
+                      type="number"
+                      value={range.max_score}
+                      onChange={(e) =>
+                        updateRange(rangeIndex, (current) => ({ ...current, max_score: Number(e.target.value) }))
+                      }
+                    />
+                    <input
+                      type="number"
+                      value={range.sort_order}
+                      onChange={(e) =>
+                        updateRange(rangeIndex, (current) => ({ ...current, sort_order: Number(e.target.value) }))
+                      }
+                    />
+                  </div>
+
+                  <div className="stack">
+                    <div className="header-row">
+                      <strong>Открытые вопросы</strong>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateRange(rangeIndex, (current) => ({
+                            ...current,
+                            open_questions: [
+                              ...current.open_questions,
+                              { text: "Новый открытый вопрос", sort_order: current.open_questions.length + 1 },
+                            ],
+                          }))
+                        }
+                      >
+                        Добавить вопрос
+                      </button>
+                    </div>
+
+                    {range.open_questions.map((question, questionIndex) => (
+                      <div key={questionIndex} className="inline-grid open-question-grid">
+                        <textarea
+                          rows={2}
+                          value={question.text}
+                          onChange={(e) =>
+                            updateRange(rangeIndex, (current) => ({
+                              ...current,
+                              open_questions: current.open_questions.map((item, itemIndex) =>
+                                itemIndex === questionIndex ? { ...item, text: e.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <input
+                          type="number"
+                          value={question.sort_order}
+                          onChange={(e) =>
+                            updateRange(rangeIndex, (current) => ({
+                              ...current,
+                              open_questions: current.open_questions.map((item, itemIndex) =>
+                                itemIndex === questionIndex ? { ...item, sort_order: Number(e.target.value) } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="danger-button"
+                          onClick={() =>
+                            updateRange(rangeIndex, (current) => ({
+                              ...current,
+                              open_questions: current.open_questions.filter((_, itemIndex) => itemIndex !== questionIndex),
+                            }))
+                          }
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>

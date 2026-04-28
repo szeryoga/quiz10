@@ -1,19 +1,14 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
 
 from app.api.deps import DBSession
+from app.models.flow import ResultRange, StageOneQuestion, StageQuestionType, SurveySubmission
 from app.models.open_event import AppOpenEvent
-from app.models.submission import SubmissionStatus, UserSubmission
-from app.models.topic import Topic
+from app.schemas.flow import PublicFlowRead, SurveySubmissionCreate, SurveySubmissionResponse
 from app.schemas.open_event import AppOpenRequest, AppOpenResponse
-from app.schemas.settings import PublicSettingsRead
-from app.schemas.submission import SubmissionCreate, SubmissionResponse
-from app.schemas.topic import TopicWithQuestionsRead
-from app.services.ai import analyze_answers
-from app.services.notify import send_notifications
+from app.services.flow_service import get_flow_config
 from app.services.settings_service import get_or_create_settings
 
 
@@ -25,25 +20,20 @@ def start_of_day_utc() -> datetime:
     return datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc)
 
 
-@router.get("/topics", response_model=list[TopicWithQuestionsRead])
-def get_public_topics(db: DBSession) -> list[Topic]:
-    statement = (
-        select(Topic)
-        .where(Topic.is_active.is_(True))
-        .options(selectinload(Topic.questions))
-        .order_by(Topic.sort_order.asc(), Topic.id.asc())
+def find_result_range(result_ranges: list[ResultRange], total_score: int) -> ResultRange:
+    for result_range in result_ranges:
+        if result_range.min_score <= total_score <= result_range.max_score:
+            return result_range
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Для набранного количества баллов не найден диапазон результата",
     )
-    return list(db.scalars(statement).all())
 
 
-@router.get("/settings", response_model=PublicSettingsRead)
-def get_public_settings(db: DBSession) -> PublicSettingsRead:
-    settings = get_or_create_settings(db)
-    return PublicSettingsRead(
-        app_title=settings.app_title,
-        app_description=settings.app_description,
-        thank_you_text=settings.thank_you_text,
-    )
+@router.get("/flow", response_model=PublicFlowRead)
+def get_public_flow(db: DBSession) -> PublicFlowRead:
+    settings, stage_one_questions, result_ranges = get_flow_config(db)
+    return PublicFlowRead(settings=settings, stage_one_questions=stage_one_questions, result_ranges=result_ranges)
 
 
 @router.post("/open", response_model=AppOpenResponse)
@@ -55,7 +45,7 @@ def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> A
         select(func.count(AppOpenEvent.id)).where(AppOpenEvent.created_at >= from_dt)
     ) or 0
     if global_count >= settings.global_daily_open_limit:
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Global daily limit reached")
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Дневной лимит открытий исчерпан")
 
     user_count = 0
     if payload.telegram_id:
@@ -66,7 +56,10 @@ def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> A
             )
         ) or 0
         if user_count >= settings.user_daily_open_limit:
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="User daily limit reached")
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Для этого пользователя исчерпан дневной лимит открытий",
+            )
 
     db.add(
         AppOpenEvent(
@@ -84,38 +77,119 @@ def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> A
     )
 
 
-@router.post("/submit", response_model=SubmissionResponse)
-async def submit_answers(payload: SubmissionCreate, db: DBSession) -> SubmissionResponse:
-    topic = db.scalar(
-        select(Topic).where(Topic.id == payload.topic_id).options(selectinload(Topic.questions))
-    )
-    if not topic:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
-    if not payload.answers:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Answers are required")
-    if any(not item.answer.strip() for item in payload.answers):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Answers must be non-empty")
+@router.post("/submit", response_model=SurveySubmissionResponse)
+def submit_answers(payload: SurveySubmissionCreate, db: DBSession) -> SurveySubmissionResponse:
+    _, stage_one_questions, result_ranges = get_flow_config(db)
+    questions_map = {question.id: question for question in stage_one_questions}
 
-    submission = UserSubmission(
-        topic_id=payload.topic_id,
+    if not stage_one_questions:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Этап 1 не настроен")
+
+    if len(payload.stage_one_answers) != len(stage_one_questions):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нужно ответить на все вопросы первого этапа",
+        )
+
+    total_score = 0
+    stage_one_snapshot: list[dict] = []
+    seen_questions: set[int] = set()
+
+    for answer in payload.stage_one_answers:
+        question = questions_map.get(answer.question_id)
+        if not question:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный вопрос первого этапа")
+        if answer.question_id in seen_questions:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Вопрос первого этапа продублирован")
+        seen_questions.add(answer.question_id)
+
+        option_ids = answer.selected_option_ids
+        if not option_ids:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нужно выбрать хотя бы один вариант")
+        if question.question_type == StageQuestionType.single_choice and len(option_ids) != 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Для этого вопроса можно выбрать только один вариант",
+            )
+
+        option_map = {option.id: option for option in question.options}
+        selected_options = []
+        for option_id in dict.fromkeys(option_ids):
+            option = option_map.get(option_id)
+            if not option:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный вариант ответа")
+            total_score += option.score
+            selected_options.append({"id": option.id, "text": option.text, "score": option.score})
+
+        stage_one_snapshot.append(
+            {
+                "question_id": question.id,
+                "question_text": question.text,
+                "question_type": question.question_type,
+                "selected_options": selected_options,
+            }
+        )
+
+    result_range = find_result_range(result_ranges, total_score)
+    expected_stage_two_questions = {item.id: item for item in result_range.open_questions}
+    stage_two_snapshot: list[dict] = []
+
+    if payload.continued_to_stage_two:
+        if len(payload.stage_two_answers) != len(result_range.open_questions):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Нужно ответить на все вопросы второго этапа",
+            )
+
+        seen_open_questions: set[int] = set()
+        for answer in payload.stage_two_answers:
+            question = expected_stage_two_questions.get(answer.question_id)
+            if not question:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный вопрос второго этапа")
+            if answer.question_id in seen_open_questions:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Вопрос второго этапа продублирован",
+                )
+            seen_open_questions.add(answer.question_id)
+            if not answer.answer.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Ответы второго этапа не должны быть пустыми",
+                )
+            stage_two_snapshot.append(
+                {
+                    "question_id": question.id,
+                    "question_text": question.text,
+                    "answer": answer.answer.strip(),
+                }
+            )
+    elif payload.stage_two_answers:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ответы второго этапа можно отправлять только после подтверждения перехода",
+        )
+
+    submission = SurveySubmission(
         telegram_id=payload.telegram_id,
         username=payload.username,
         first_name=payload.first_name,
         last_name=payload.last_name,
-        answers=[item.model_dump() for item in payload.answers],
-        status=SubmissionStatus.pending,
+        total_score=total_score,
+        continued_to_stage_two=payload.continued_to_stage_two,
+        result_range_id=result_range.id,
+        result_title=result_range.title,
+        result_summary=result_range.summary,
+        key_task=result_range.key_task,
+        stage_one_answers=stage_one_snapshot,
+        stage_two_answers=stage_two_snapshot,
     )
     db.add(submission)
     db.commit()
-    db.refresh(submission)
 
-    settings = get_or_create_settings(db)
-    ok, analysis = await analyze_answers(settings, topic.title, submission.answers)
-    submission.ai_response = analysis
-    submission.status = SubmissionStatus.analyzed if ok else SubmissionStatus.failed
-    db.commit()
-    db.refresh(submission)
-
-    await send_notifications(settings, submission, topic)
-
-    return SubmissionResponse(success=True, status=submission.status)
+    return SurveySubmissionResponse(
+        success=True,
+        total_score=total_score,
+        result_title=result_range.title,
+        continued_to_stage_two=payload.continued_to_stage_two,
+    )

@@ -2,20 +2,24 @@ import { useEffect, useMemo, useState } from "react";
 
 import { api } from "./api";
 import { getTelegramUser, prepareTelegram } from "./telegram";
-import type { PublicSettings, Topic } from "./types";
+import type { PublicFlow, ResultRange, StageOneQuestion } from "./types";
 
-type AppStage = "topics" | "question" | "done";
+type AppStage = "intro" | "stage1" | "result" | "stage2" | "done";
+
+function findResultRange(resultRanges: ResultRange[], totalScore: number) {
+  return resultRanges.find((item) => totalScore >= item.min_score && totalScore <= item.max_score) ?? null;
+}
 
 export default function App() {
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [settings, setSettings] = useState<PublicSettings | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [flow, setFlow] = useState<PublicFlow | null>(null);
+  const [stage, setStage] = useState<AppStage>("intro");
+  const [stageOneIndex, setStageOneIndex] = useState(0);
+  const [stageTwoIndex, setStageTwoIndex] = useState(0);
+  const [stageOneAnswers, setStageOneAnswers] = useState<Record<number, number[]>>({});
+  const [stageTwoAnswers, setStageTwoAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [stage, setStage] = useState<AppStage>("topics");
 
   useEffect(() => {
     prepareTelegram();
@@ -23,13 +27,11 @@ export default function App() {
 
     async function load() {
       try {
-        const [topicsData, settingsData] = await Promise.all([
-          api.getTopics(),
-          api.getSettings(),
+        const [flowData] = await Promise.all([
+          api.getFlow(),
           api.registerOpen(telegramUser?.id ? String(telegramUser.id) : null),
         ]);
-        setTopics(topicsData);
-        setSettings(settingsData);
+        setFlow(flowData);
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : "Ошибка загрузки");
       } finally {
@@ -40,53 +42,84 @@ export default function App() {
     void load();
   }, []);
 
-  const currentQuestion = selectedTopic?.questions[questionIndex] ?? null;
-  const currentAnswer = currentQuestion ? answers[currentQuestion.id] ?? "" : "";
-  const isLastQuestion = selectedTopic ? questionIndex === selectedTopic.questions.length - 1 : false;
-
-  const titleText = useMemo(() => {
-    if (stage === "done") {
-      return "Спасибо";
-    }
-    if (selectedTopic) {
-      return selectedTopic.title;
-    }
-    return settings?.app_title || "10 вопросов";
-  }, [selectedTopic, settings?.app_title, stage]);
-
   useEffect(() => {
-    if (settings?.app_title) {
-      document.title = settings.app_title;
+    if (flow?.settings.app_title) {
+      document.title = flow.settings.app_title;
     }
-  }, [settings?.app_title]);
+  }, [flow?.settings.app_title]);
 
-  function resetFlow() {
-    setSelectedTopic(null);
-    setQuestionIndex(0);
-    setAnswers({});
-    setStage("topics");
+  const currentStageOneQuestion = flow?.stage_one_questions[stageOneIndex] ?? null;
+  const currentStageTwoQuestion = useMemo(() => {
+    const result = getComputedResult();
+    return result?.resultRange.open_questions[stageTwoIndex] ?? null;
+  }, [flow, stageOneAnswers, stageTwoIndex]);
+
+  function getComputedResult() {
+    if (!flow) return null;
+    const totalScore = flow.stage_one_questions.reduce((sum, question) => {
+      const selected = stageOneAnswers[question.id] ?? [];
+      const optionScore = question.options
+        .filter((option) => selected.includes(option.id))
+        .reduce((acc, option) => acc + option.score, 0);
+      return sum + optionScore;
+    }, 0);
+    const resultRange = findResultRange(flow.result_ranges, totalScore);
+    return resultRange ? { totalScore, resultRange } : null;
   }
 
-  async function handleSubmit() {
-    if (!selectedTopic) return;
-    const telegramUser = getTelegramUser();
-    const payload = {
-      topic_id: selectedTopic.id,
-      telegram_id: telegramUser?.id ? String(telegramUser.id) : null,
-      username: telegramUser?.username ?? null,
-      first_name: telegramUser?.first_name ?? null,
-      last_name: telegramUser?.last_name ?? null,
-      answers: selectedTopic.questions.map((question) => ({
-        question_id: question.id,
-        question_text: question.text,
-        answer: answers[question.id] ?? "",
-      })),
-    };
+  const computedResult = getComputedResult();
 
+  function resetFlow() {
+    setStage("intro");
+    setStageOneIndex(0);
+    setStageTwoIndex(0);
+    setStageOneAnswers({});
+    setStageTwoAnswers({});
+    setError(null);
+  }
+
+  function updateSingleChoice(questionId: number, optionId: number) {
+    setStageOneAnswers((prev) => ({ ...prev, [questionId]: [optionId] }));
+  }
+
+  function updateMultiChoice(questionId: number, optionId: number) {
+    setStageOneAnswers((prev) => {
+      const current = prev[questionId] ?? [];
+      const next = current.includes(optionId)
+        ? current.filter((item) => item !== optionId)
+        : [...current, optionId];
+      return { ...prev, [questionId]: next };
+    });
+  }
+
+  function isStageOneAnswerReady(question: StageOneQuestion | null) {
+    if (!question) return false;
+    return (stageOneAnswers[question.id] ?? []).length > 0;
+  }
+
+  async function submitFlow(continuedToStageTwo: boolean) {
+    if (!flow || !computedResult) return;
+    const telegramUser = getTelegramUser();
     setSubmitting(true);
     setError(null);
     try {
-      await api.submit(payload);
+      await api.submit({
+        telegram_id: telegramUser?.id ? String(telegramUser.id) : null,
+        username: telegramUser?.username ?? null,
+        first_name: telegramUser?.first_name ?? null,
+        last_name: telegramUser?.last_name ?? null,
+        continued_to_stage_two: continuedToStageTwo,
+        stage_one_answers: flow.stage_one_questions.map((question) => ({
+          question_id: question.id,
+          selected_option_ids: stageOneAnswers[question.id] ?? [],
+        })),
+        stage_two_answers: continuedToStageTwo
+          ? computedResult.resultRange.open_questions.map((question) => ({
+              question_id: question.id,
+              answer: stageTwoAnswers[question.id] ?? "",
+            }))
+          : [],
+      });
       setStage("done");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Ошибка отправки");
@@ -99,67 +132,66 @@ export default function App() {
     <main className="app-shell">
       <section className="card">
         <p className="kicker">Telegram Mini App</p>
-        <h1>{titleText}</h1>
+        <h1>{flow?.settings.app_title || "10 вопросов"}</h1>
 
         {loading ? <p className="muted">Загрузка...</p> : null}
         {error ? <div className="error-box">{error}</div> : null}
 
-        {!loading && stage === "topics" ? (
+        {!loading && flow && stage === "intro" ? (
           <div className="stack">
-            <p className="muted">
-              {settings?.app_description || "Выберите психологическую тему и ответьте на 10 вопросов."}
-            </p>
-            {topics.map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                className="topic-card"
-                onClick={() => {
-                  setSelectedTopic(topic);
-                  setQuestionIndex(0);
-                  setStage("question");
-                }}
-              >
-                <strong>{topic.title}</strong>
-                <span>{topic.description || "10 вопросов для бережного анализа ситуации"}</span>
-              </button>
-            ))}
+            <p className="muted">{flow.settings.app_description}</p>
+            <button type="button" className="primary-button" onClick={() => setStage("stage1")}>
+              Начать
+            </button>
           </div>
         ) : null}
 
-        {!loading && stage === "question" && selectedTopic && currentQuestion ? (
+        {!loading && flow && stage === "stage1" && currentStageOneQuestion ? (
           <div className="stack">
             <div className="progress-row">
               <span>
-                Вопрос {questionIndex + 1} из {selectedTopic.questions.length}
+                Вопрос {stageOneIndex + 1} из {flow.stage_one_questions.length}
               </span>
               <button type="button" className="link-button" onClick={resetFlow}>
-                Сменить тему
+                Сначала
               </button>
             </div>
 
             <div className="question-card">
-              <p>{currentQuestion.text}</p>
+              <p>{currentStageOneQuestion.text}</p>
+              <small className="helper-text">
+                {currentStageOneQuestion.question_type === "multi_choice"
+                  ? "Можно выбрать несколько вариантов"
+                  : "Выберите один вариант"}
+              </small>
             </div>
 
-            <textarea
-              value={currentAnswer}
-              onChange={(event) =>
-                setAnswers((prev) => ({
-                  ...prev,
-                  [currentQuestion.id]: event.target.value,
-                }))
-              }
-              rows={7}
-              placeholder="Напишите ваш ответ..."
-            />
+            <div className="stack">
+              {currentStageOneQuestion.options.map((option) => {
+                const selected = (stageOneAnswers[currentStageOneQuestion.id] ?? []).includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`option-card${selected ? " selected" : ""}`}
+                    onClick={() =>
+                      currentStageOneQuestion.question_type === "single_choice"
+                        ? updateSingleChoice(currentStageOneQuestion.id, option.id)
+                        : updateMultiChoice(currentStageOneQuestion.id, option.id)
+                    }
+                  >
+                    <span>{option.text}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-            {!isLastQuestion ? (
+            {stageOneIndex < flow.stage_one_questions.length - 1 ? (
               <button
                 type="button"
                 className="primary-button"
-                disabled={!currentAnswer.trim()}
-                onClick={() => setQuestionIndex((value) => value + 1)}
+                disabled={!isStageOneAnswerReady(currentStageOneQuestion)}
+                onClick={() => setStageOneIndex((value) => value + 1)}
               >
                 Далее
               </button>
@@ -167,20 +199,107 @@ export default function App() {
               <button
                 type="button"
                 className="primary-button"
-                disabled={!currentAnswer.trim() || submitting}
-                onClick={() => void handleSubmit()}
+                disabled={!isStageOneAnswerReady(currentStageOneQuestion)}
+                onClick={() => setStage("result")}
               >
-                {submitting ? "Отправка..." : "Отправить мои ответы"}
+                Показать результат
               </button>
             )}
           </div>
         ) : null}
 
-        {!loading && stage === "done" ? (
+        {!loading && flow && stage === "result" && computedResult ? (
           <div className="stack">
-            <p className="thank-you">{settings?.thank_you_text || "Спасибо. Ваши ответы отправлены."}</p>
+            <div className="question-card">
+              <p className="result-title">{computedResult.resultRange.title}</p>
+              <p className="muted result-summary">{computedResult.resultRange.summary}</p>
+            </div>
+
+            <div className="task-card">
+              <strong>Ключевая задача</strong>
+              <p>{computedResult.resultRange.key_task}</p>
+            </div>
+
+            <p className="muted">Хочешь продолжить и ответить ещё на несколько вопросов по этой теме?</p>
+
+            <div className="button-split">
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={submitting}
+                onClick={() => void submitFlow(false)}
+              >
+                Нет
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={submitting}
+                onClick={() => {
+                  setStageTwoIndex(0);
+                  setStage("stage2");
+                }}
+              >
+                Да
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {!loading && flow && stage === "stage2" && computedResult && currentStageTwoQuestion ? (
+          <div className="stack">
+            <div className="progress-row">
+              <span>
+                Вопрос {stageTwoIndex + 1} из {computedResult.resultRange.open_questions.length}
+              </span>
+              <button type="button" className="link-button" onClick={() => setStage("result")}>
+                Назад
+              </button>
+            </div>
+
+            <div className="question-card">
+              <p>{currentStageTwoQuestion.text}</p>
+            </div>
+
+            <textarea
+              value={stageTwoAnswers[currentStageTwoQuestion.id] ?? ""}
+              onChange={(event) =>
+                setStageTwoAnswers((prev) => ({
+                  ...prev,
+                  [currentStageTwoQuestion.id]: event.target.value,
+                }))
+              }
+              rows={7}
+              placeholder="Напишите ваш ответ..."
+            />
+
+            {stageTwoIndex < computedResult.resultRange.open_questions.length - 1 ? (
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!(stageTwoAnswers[currentStageTwoQuestion.id] ?? "").trim()}
+                onClick={() => setStageTwoIndex((value) => value + 1)}
+              >
+                Далее
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!(stageTwoAnswers[currentStageTwoQuestion.id] ?? "").trim() || submitting}
+                onClick={() => void submitFlow(true)}
+              >
+                {submitting ? "Отправка..." : "Отправить ответы"}
+              </button>
+            )}
+          </div>
+        ) : null}
+
+        {!loading && flow && stage === "done" ? (
+          <div className="stack">
+            <p className="thank-you">{flow.settings.thank_you_text}</p>
             <button type="button" className="primary-button" onClick={resetFlow}>
-              Вернуться к темам
+              Пройти заново
             </button>
           </div>
         ) : null}

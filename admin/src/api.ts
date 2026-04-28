@@ -1,4 +1,4 @@
-import type { Question, Settings, Submission, Topic } from "./types";
+import type { FlowConfig, Submission } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 const TOKEN_KEY = "quiz10_admin_token";
@@ -50,41 +50,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ password }),
     }),
-  getSettings: () => request<Settings>("/admin/settings"),
-  updateSettings: (payload: Partial<Settings>) =>
-    request<Settings>("/admin/settings", {
+  getFlow: () => request<FlowConfig>("/admin/flow"),
+  updateFlow: (payload: FlowConfig) =>
+    request<FlowConfig>("/admin/flow", {
       method: "PUT",
       body: JSON.stringify(payload),
-    }),
-  getTopics: () => request<Topic[]>("/admin/topics"),
-  getTopic: (id: number) => request<Topic>(`/admin/topics/${id}`),
-  createTopic: (payload: Partial<Topic>) =>
-    request<Topic>("/admin/topics", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-  updateTopic: (id: number, payload: Partial<Topic>) =>
-    request<Topic>(`/admin/topics/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    }),
-  deleteTopic: (id: number) =>
-    request<void>(`/admin/topics/${id}`, {
-      method: "DELETE",
-    }),
-  createQuestion: (payload: Partial<Question>) =>
-    request<Question>("/admin/questions", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-  updateQuestion: (id: number, payload: Partial<Question>) =>
-    request<Question>(`/admin/questions/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    }),
-  deleteQuestion: (id: number) =>
-    request<void>(`/admin/questions/${id}`, {
-      method: "DELETE",
     }),
   getSubmissions: () => request<Submission[]>("/admin/submissions"),
   getSubmission: (id: number) => request<Submission>(`/admin/submissions/${id}`),

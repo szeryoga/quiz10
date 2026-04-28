@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import fcntl
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +10,7 @@ from app.api.public import router as public_router
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
-from app.models import open_event, question, settings, submission, topic  # noqa: F401
+from app.models import flow, open_event, question, settings, submission, topic  # noqa: F401
 from app.services.seed import seed_initial_data
 
 
@@ -51,13 +52,16 @@ def ensure_schema_compatibility() -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    ensure_schema_compatibility()
-    db = SessionLocal()
-    try:
-        seed_initial_data(db)
-    finally:
-        db.close()
+    with open("/tmp/quiz10-startup.lock", "w", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        Base.metadata.create_all(bind=engine)
+        ensure_schema_compatibility()
+        db = SessionLocal()
+        try:
+            seed_initial_data(db)
+        finally:
+            db.close()
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
     yield
 
 
