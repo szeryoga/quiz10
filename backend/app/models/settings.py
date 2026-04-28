@@ -1,0 +1,20 @@
+from sqlalchemy import Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db.base import Base
+from app.models.mixins import TimestampMixin
+
+
+class AppSettings(TimestampMixin, Base):
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    admin_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    admin_telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    thank_you_text: Mapped[str] = mapped_column(
+        Text, default="Спасибо. Ваши ответы получены. Специалист свяжется с вами после проверки."
+    )
+    user_daily_open_limit: Mapped[int] = mapped_column(Integer, default=3)
+    global_daily_open_limit: Mapped[int] = mapped_column(Integer, default=100)
+    xai_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    xai_model: Mapped[str] = mapped_column(String(120), default="grok-2-latest")

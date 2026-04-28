@@ -1,0 +1,151 @@
+:root {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  color: #13243d;
+  background: #f4efe7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 211, 154, 0.8), transparent 28%),
+    linear-gradient(140deg, #fbf2e6 0%, #eef3ec 100%);
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 20px 14px;
+  display: grid;
+  place-items: center;
+}
+
+.card {
+  width: min(100%, 520px);
+  padding: 26px 18px;
+  border-radius: 28px;
+  background: rgba(255, 252, 246, 0.9);
+  border: 1px solid rgba(19, 36, 61, 0.1);
+  box-shadow: 0 24px 70px rgba(17, 36, 58, 0.12);
+}
+
+.kicker {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #0c8a75;
+}
+
+h1 {
+  margin: 0 0 18px;
+  font-size: clamp(32px, 7vw, 44px);
+  line-height: 0.95;
+}
+
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+.muted {
+  margin: 0;
+  color: #546779;
+  line-height: 1.5;
+}
+
+.topic-card,
+.primary-button,
+.link-button {
+  font: inherit;
+}
+
+.topic-card {
+  width: 100%;
+  padding: 18px;
+  border: 0;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0c8a75, #0b6b65);
+  color: #f8fffb;
+  text-align: left;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.topic-card span {
+  color: rgba(248, 255, 251, 0.82);
+  line-height: 1.45;
+}
+
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  color: #546779;
+  font-size: 14px;
+}
+
+.link-button {
+  border: 0;
+  background: transparent;
+  color: #0b6b65;
+  cursor: pointer;
+}
+
+.question-card {
+  padding: 18px;
+  border-radius: 18px;
+  background: #fffaf3;
+  border: 1px solid rgba(19, 36, 61, 0.08);
+  line-height: 1.55;
+}
+
+.question-card p {
+  margin: 0;
+}
+
+textarea {
+  width: 100%;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(19, 36, 61, 0.12);
+  resize: vertical;
+  min-height: 160px;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.primary-button {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #f6da9e, #e8be73);
+  color: #2f251c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error-box {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(150, 29, 29, 0.08);
+  color: #812323;
+}
+
+.thank-you {
+  margin: 0;
+  line-height: 1.6;
+  color: #31445a;
+}
