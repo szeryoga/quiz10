@@ -228,7 +228,6 @@ export default function App() {
                       }
                     />
                     <span className="option-copy">{option.text}</span>
-                    <span className="option-indicator" aria-hidden="true" />
                   </label>
                 );
               })}
