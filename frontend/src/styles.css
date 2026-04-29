@@ -66,24 +66,25 @@ body::before {
 .app-shell {
   --scene-height: min(calc(100dvh - 32px), 980px);
   --scene-width: calc(var(--scene-height) * 0.5628);
-  --card-width: min(calc(var(--scene-width) * 0.64), calc(100vw - 32px));
+  --card-width: min(calc(var(--scene-width) * 0.78), calc(100vw - 32px));
   position: relative;
   min-height: 100dvh;
   padding: 22px 16px 30px;
   display: grid;
-  place-items: center;
-  overflow: hidden;
+  justify-items: center;
+  align-content: start;
+  overflow-x: hidden;
 }
 
 .app-shell::after {
   content: "";
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   width: var(--scene-width);
-  height: var(--scene-height);
-  transform: translate(-50%, -50%);
-  background: url("/app/images/background.png") center / 100% 100% no-repeat;
+  transform: translateX(-50%);
+  background: url("/app/images/background.png") center top / 100% auto repeat-y;
   pointer-events: none;
   z-index: 0;
 }
@@ -109,6 +110,7 @@ body::before {
   position: relative;
   z-index: 2;
   width: var(--card-width);
+  margin-top: 18px;
   padding: 24px 20px 22px;
   border-radius: 32px;
   background: transparent;
@@ -575,17 +577,32 @@ h1 {
 }
 
 @media (max-width: 420px) {
+  .app-shell {
+    --card-width: min(calc(var(--scene-width) * 0.82), calc(100vw - 24px));
+    padding-inline: 12px;
+  }
+
   .card {
     padding-inline: 16px;
   }
 
   .feature-grid {
-    gap: 8px;
-    padding: 14px 12px;
+    gap: 6px;
+    padding: 14px 10px;
+  }
+
+  .feature-card {
+    gap: 6px;
+  }
+
+  .feature-card strong {
+    font-size: 12px;
   }
 
   .feature-card span {
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1.35;
+    word-break: keep-all;
   }
 
   .option-card {
