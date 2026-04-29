@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { api } from "./api";
-import { getTelegramUser, prepareTelegram } from "./telegram";
+import { closeTelegramApp, getTelegramUser, prepareTelegram } from "./telegram";
 import type { PublicFlow, ResultRange, StageOneQuestion } from "./types";
 
 type AppStage = "intro" | "stage1" | "result" | "send-message" | "sent-message" | "done";
@@ -124,6 +124,13 @@ export default function App() {
       window.alert(message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function closeApp() {
+    closeTelegramApp();
+    if (!window.Telegram?.WebApp?.close) {
+      window.close();
     }
   }
 
@@ -325,7 +332,7 @@ export default function App() {
             <p className="eyebrow">Спасибо</p>
             <p className="result-title">{flow.settings.final_title}</p>
             <p className="thank-you">{flow.settings.thank_you_text}</p>
-            <button type="button" className="primary-button" onClick={resetFlow}>
+            <button type="button" className="primary-button" onClick={closeApp}>
               {flow.settings.final_button_text}
             </button>
           </div>
