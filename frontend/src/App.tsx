@@ -169,19 +169,18 @@ export default function App() {
               <article className="feature-card">
                 <div className="feature-icon">◌</div>
                 <strong>Точно</strong>
-                <span>Вопросы про текущее состояние</span>
+                <span>Твое текущее состояние</span>
               </article>
               <article className="feature-card">
                 <div className="feature-icon">♡</div>
                 <strong>Спокойно</strong>
-                <span>Мягкий ритм и чистый интерфейс</span>
+                <span>Загляни вглубь себя</span>
               </article>
             </div>
             <button type="button" className="primary-button" onClick={() => setStage("stage1")}>
               Начать тест
             </button>
             <p className="footer-note">Примерно 5 минут</p>
-            <p className="info-note">Отвечай честно — здесь нет правильных или неправильных ответов.</p>
           </div>
         ) : null}
 
