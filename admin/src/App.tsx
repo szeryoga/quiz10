@@ -251,6 +251,77 @@ function IntroPage() {
               onChange={(e) => setFlow({ ...flow, settings: { ...flow.settings, app_description: e.target.value } })}
             />
           </label>
+          <label>
+            Верхняя строка бренда
+            <input
+              value={flow.settings.brand_eyebrow}
+              onChange={(e) => setFlow({ ...flow, settings: { ...flow.settings, brand_eyebrow: e.target.value } })}
+            />
+          </label>
+          <label>
+            Нижняя строка бренда
+            <input
+              value={flow.settings.brand_name}
+              onChange={(e) => setFlow({ ...flow, settings: { ...flow.settings, brand_name: e.target.value } })}
+            />
+          </label>
+          <label>
+            Блок 1: заголовок
+            <input
+              value={flow.settings.intro_feature_one_title}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, intro_feature_one_title: e.target.value } })
+              }
+            />
+          </label>
+          <label>
+            Блок 1: текст
+            <textarea
+              rows={3}
+              value={flow.settings.intro_feature_one_text}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, intro_feature_one_text: e.target.value } })
+              }
+            />
+          </label>
+          <label>
+            Блок 2: заголовок
+            <input
+              value={flow.settings.intro_feature_two_title}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, intro_feature_two_title: e.target.value } })
+              }
+            />
+          </label>
+          <label>
+            Блок 2: текст
+            <textarea
+              rows={3}
+              value={flow.settings.intro_feature_two_text}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, intro_feature_two_text: e.target.value } })
+              }
+            />
+          </label>
+          <label>
+            Блок 3: заголовок
+            <input
+              value={flow.settings.intro_feature_three_title}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, intro_feature_three_title: e.target.value } })
+              }
+            />
+          </label>
+          <label>
+            Блок 3: текст
+            <textarea
+              rows={3}
+              value={flow.settings.intro_feature_three_text}
+              onChange={(e) =>
+                setFlow({ ...flow, settings: { ...flow.settings, intro_feature_three_text: e.target.value } })
+              }
+            />
+          </label>
         </div>
       ) : null}
     </div>

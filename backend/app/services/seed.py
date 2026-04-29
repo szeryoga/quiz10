@@ -134,6 +134,14 @@ def seed_initial_data(db: Session) -> None:
                 id=1,
                 app_title="Насколько ты сейчас в контакте с собой (и своим состоянием)?",
                 app_description="Ответь на несколько вопросов. В конце ты увидишь вывод, ключевую задачу и сможешь продолжить исследование глубже.",
+                brand_eyebrow="Щербинина Евгения",
+                brand_name="психолог и арт-терапевт",
+                intro_feature_one_title="Бережно",
+                intro_feature_one_text="Без правильных и неправильных ответов",
+                intro_feature_two_title="Точно",
+                intro_feature_two_text="Твое текущее состояние",
+                intro_feature_three_title="Спокойно",
+                intro_feature_three_text="Загляни вглубь себя",
                 send_message_title="Посылка сообщения",
                 send_message_text="Отправь мне результаты твоего теста, я посмотрю их и свяжусь с тобой",
                 sent_message_title="Сообщение послано",
@@ -161,6 +169,30 @@ def seed_initial_data(db: Session) -> None:
                 "Ответь на несколько вопросов. В конце ты увидишь вывод, ключевую задачу "
                 "и сможешь продолжить исследование глубже."
             )
+            changed = True
+        if not getattr(settings_row, "brand_eyebrow", None):
+            settings_row.brand_eyebrow = "Щербинина Евгения"
+            changed = True
+        if not getattr(settings_row, "brand_name", None):
+            settings_row.brand_name = "психолог и арт-терапевт"
+            changed = True
+        if not getattr(settings_row, "intro_feature_one_title", None):
+            settings_row.intro_feature_one_title = "Бережно"
+            changed = True
+        if not getattr(settings_row, "intro_feature_one_text", None):
+            settings_row.intro_feature_one_text = "Без правильных и неправильных ответов"
+            changed = True
+        if not getattr(settings_row, "intro_feature_two_title", None):
+            settings_row.intro_feature_two_title = "Точно"
+            changed = True
+        if not getattr(settings_row, "intro_feature_two_text", None):
+            settings_row.intro_feature_two_text = "Твое текущее состояние"
+            changed = True
+        if not getattr(settings_row, "intro_feature_three_title", None):
+            settings_row.intro_feature_three_title = "Спокойно"
+            changed = True
+        if not getattr(settings_row, "intro_feature_three_text", None):
+            settings_row.intro_feature_three_text = "Загляни вглубь себя"
             changed = True
         if settings_row.thank_you_text == "Спасибо за доверие. Мы получили ваши ответы и скоро внимательно их изучим.":
             settings_row.thank_you_text = (

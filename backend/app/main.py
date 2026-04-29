@@ -40,6 +40,73 @@ def ensure_schema_compatibility() -> None:
             text(
                 """
                 ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS brand_eyebrow VARCHAR(255) DEFAULT 'Щербинина Евгения'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS brand_name VARCHAR(255) DEFAULT 'психолог и арт-терапевт'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS intro_feature_one_title VARCHAR(255) DEFAULT 'Бережно'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS intro_feature_one_text TEXT
+                DEFAULT 'Без правильных и неправильных ответов'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS intro_feature_two_title VARCHAR(255) DEFAULT 'Точно'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS intro_feature_two_text TEXT
+                DEFAULT 'Твое текущее состояние'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS intro_feature_three_title VARCHAR(255) DEFAULT 'Спокойно'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
+                ADD COLUMN IF NOT EXISTS intro_feature_three_text TEXT
+                DEFAULT 'Загляни вглубь себя'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE app_settings
                 ADD COLUMN IF NOT EXISTS final_title VARCHAR(255) DEFAULT 'Спасибо за ответы!'
                 """
             )
@@ -94,6 +161,23 @@ def ensure_schema_compatibility() -> None:
                     app_description = COALESCE(
                         NULLIF(app_description, ''),
                         'Выберите психологическую тему и ответьте на 10 вопросов.'
+                    ),
+                    brand_eyebrow = COALESCE(NULLIF(brand_eyebrow, ''), 'Щербинина Евгения'),
+                    brand_name = COALESCE(NULLIF(brand_name, ''), 'психолог и арт-терапевт'),
+                    intro_feature_one_title = COALESCE(NULLIF(intro_feature_one_title, ''), 'Бережно'),
+                    intro_feature_one_text = COALESCE(
+                        NULLIF(intro_feature_one_text, ''),
+                        'Без правильных и неправильных ответов'
+                    ),
+                    intro_feature_two_title = COALESCE(NULLIF(intro_feature_two_title, ''), 'Точно'),
+                    intro_feature_two_text = COALESCE(
+                        NULLIF(intro_feature_two_text, ''),
+                        'Твое текущее состояние'
+                    ),
+                    intro_feature_three_title = COALESCE(NULLIF(intro_feature_three_title, ''), 'Спокойно'),
+                    intro_feature_three_text = COALESCE(
+                        NULLIF(intro_feature_three_text, ''),
+                        'Загляни вглубь себя'
                     ),
                     send_message_title = COALESCE(NULLIF(send_message_title, ''), 'Посылка сообщения'),
                     send_message_text = COALESCE(

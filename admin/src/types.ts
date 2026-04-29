@@ -26,6 +26,14 @@ export type FlowSettings = {
   id?: number;
   app_title: string;
   app_description: string;
+  brand_eyebrow: string;
+  brand_name: string;
+  intro_feature_one_title: string;
+  intro_feature_one_text: string;
+  intro_feature_two_title: string;
+  intro_feature_two_text: string;
+  intro_feature_three_title: string;
+  intro_feature_three_text: string;
   send_message_title: string;
   send_message_text: string;
   sent_message_title: string;

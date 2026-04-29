@@ -140,8 +140,8 @@ export default function App() {
               <span />
             </div>
             <div>
-              <p className="brand-eyebrow">тема дня</p>
-              <p className="brand-name">импро-тест</p>
+              <p className="brand-eyebrow">{flow?.settings.brand_eyebrow || "Щербинина Евгения"}</p>
+              <p className="brand-name">{flow?.settings.brand_name || "психолог и арт-терапевт"}</p>
             </div>
           </div>
           <div className="brand-badge" aria-hidden="true">
@@ -160,18 +160,18 @@ export default function App() {
             <div className="feature-grid" aria-hidden="true">
               <article className="feature-card">
                 <div className="feature-icon">✦</div>
-                <strong>Бережно</strong>
-                <span>Без правильных и неправильных ответов</span>
+                <strong>{flow.settings.intro_feature_one_title}</strong>
+                <span>{flow.settings.intro_feature_one_text}</span>
               </article>
               <article className="feature-card">
                 <div className="feature-icon">◌</div>
-                <strong>Точно</strong>
-                <span>Твое текущее состояние</span>
+                <strong>{flow.settings.intro_feature_two_title}</strong>
+                <span>{flow.settings.intro_feature_two_text}</span>
               </article>
               <article className="feature-card">
                 <div className="feature-icon">♡</div>
-                <strong>Спокойно</strong>
-                <span>Загляни вглубь себя</span>
+                <strong>{flow.settings.intro_feature_three_title}</strong>
+                <span>{flow.settings.intro_feature_three_text}</span>
               </article>
             </div>
             <button type="button" className="primary-button" onClick={() => setStage("stage1")}>
