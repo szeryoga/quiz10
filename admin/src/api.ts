@@ -15,6 +15,11 @@ export function clearToken() {
   window.localStorage.removeItem(TOKEN_KEY);
 }
 
+function redirectToLogin() {
+  clearToken();
+  window.location.href = `${import.meta.env.BASE_URL}login`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
   const response = await fetch(`${API_BASE}${path}`, {
@@ -27,6 +32,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
+    if (response.status === 401 && path !== "/admin/login") {
+      redirectToLogin();
+      throw new Error("Сессия истекла. Войдите заново.");
+    }
+
     let message = `Request failed: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: string };
