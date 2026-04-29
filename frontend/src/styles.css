@@ -84,7 +84,7 @@ body::before {
   bottom: 0;
   width: var(--scene-width);
   transform: translateX(-50%);
-  background: url("/app/images/background.png") center top / 100% auto repeat-y;
+  background: url("/app/images/background.jpg") center top / 100% auto repeat-y;
   pointer-events: none;
   z-index: 0;
 }
