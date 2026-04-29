@@ -48,6 +48,9 @@ export default function App() {
   }, [flow?.settings.app_title]);
 
   const currentStageOneQuestion = flow?.stage_one_questions[stageOneIndex] ?? null;
+  const isQuestionStage = stage === "stage1" && !!currentStageOneQuestion;
+  const isIntroStage = stage === "intro";
+
   function getComputedResult() {
     if (!flow) return null;
     const totalScore = flow.stage_one_questions.reduce((sum, question) => {
@@ -126,43 +129,81 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <section className="card">
-        <p className="kicker">Telegram Mini App</p>
-        <h1>{flow?.settings.app_title || "10 вопросов"}</h1>
+      <section className={`card${isIntroStage ? " intro-card" : ""}`}>
+        <header className="app-header">
+          <div className="brand">
+            <div className="brand-mark" aria-hidden="true">
+              <span />
+            </div>
+            <div>
+              <p className="brand-eyebrow">тема дня</p>
+              <p className="brand-name">импро-тест</p>
+            </div>
+          </div>
+          <div className="brand-badge" aria-hidden="true">
+            ?
+          </div>
+        </header>
 
         {loading ? <p className="muted">Загрузка...</p> : null}
         {error ? <div className="error-box">{error}</div> : null}
 
         {!loading && flow && stage === "intro" ? (
-          <div className="stack">
-            <p className="muted">{flow.settings.app_description}</p>
+          <div className="stack intro-layout">
+            <p className="hero-chip">ТЕСТ • 5 МИНУТ</p>
+            <h1>{flow.settings.app_title || "10 вопросов"}</h1>
+            <p className="muted intro-text">{flow.settings.app_description}</p>
+            <div className="feature-grid" aria-hidden="true">
+              <article className="feature-card">
+                <div className="feature-icon">✦</div>
+                <strong>Бережно</strong>
+                <span>Без правильных и неправильных ответов</span>
+              </article>
+              <article className="feature-card">
+                <div className="feature-icon">◌</div>
+                <strong>Точно</strong>
+                <span>Вопросы про текущее состояние</span>
+              </article>
+              <article className="feature-card">
+                <div className="feature-icon">♡</div>
+                <strong>Спокойно</strong>
+                <span>Мягкий ритм и чистый интерфейс</span>
+              </article>
+            </div>
             <button type="button" className="primary-button" onClick={() => setStage("stage1")}>
-              Начать
+              Начать тест
             </button>
+            <p className="footer-note">Примерно 5 минут</p>
+            <p className="info-note">Отвечай честно — здесь нет правильных или неправильных ответов.</p>
           </div>
         ) : null}
 
         {!loading && flow && stage === "stage1" && currentStageOneQuestion ? (
-          <div className="stack">
+          <div className="stack question-layout">
             <div className="progress-row">
-              <span>
+              <span className="progress-chip">
                 Вопрос {stageOneIndex + 1} из {flow.stage_one_questions.length}
               </span>
               <button type="button" className="link-button" onClick={resetFlow}>
                 Сначала
               </button>
             </div>
+            <div className="progress-bar" aria-hidden="true">
+              <span
+                style={{ width: `${((stageOneIndex + 1) / flow.stage_one_questions.length) * 100}%` }}
+              />
+            </div>
 
-            <div className="question-card">
-              <p>{currentStageOneQuestion.text}</p>
-              <small className="helper-text">
+            <div className="question-card question-prompt">
+              <h1 className="question-title">{currentStageOneQuestion.text}</h1>
+              <small className="helper-text prompt-helper">
                 {currentStageOneQuestion.question_type === "multi_choice"
                   ? "Можно выбрать несколько вариантов"
                   : "Выберите один вариант"}
               </small>
             </div>
 
-            <div className="stack" role="group" aria-label={currentStageOneQuestion.text}>
+            <div className="stack option-list" role="group" aria-label={currentStageOneQuestion.text}>
               {currentStageOneQuestion.options.map((option) => {
                 const selected = (stageOneAnswers[currentStageOneQuestion.id] ?? []).includes(option.id);
                 return (
@@ -180,12 +221,12 @@ export default function App() {
                           : updateMultiChoice(currentStageOneQuestion.id, option.id)
                       }
                     />
-                    <span>{option.text}</span>
+                    <span className="option-copy">{option.text}</span>
+                    <span className="option-indicator" aria-hidden="true" />
                   </label>
                 );
               })}
             </div>
-
             {stageOneIndex < flow.stage_one_questions.length - 1 ? (
               <button
                 type="button"
@@ -209,8 +250,9 @@ export default function App() {
         ) : null}
 
         {!loading && flow && stage === "result" && computedResult ? (
-          <div className="stack">
-            <div className="question-card">
+          <div className="stack response-layout">
+            <div className="question-card response-card">
+              <p className="eyebrow">Вывод</p>
               <p className="result-title">{computedResult.resultRange.title}</p>
               <p className="muted result-summary">{computedResult.resultRange.summary}</p>
             </div>
@@ -241,7 +283,8 @@ export default function App() {
         ) : null}
 
         {!loading && flow && stage === "send-message" ? (
-          <div className="stack">
+          <div className="stack response-layout">
+            <p className="eyebrow">Следующий шаг</p>
             <p className="result-title">{flow.settings.send_message_title}</p>
             <p className="thank-you">{flow.settings.send_message_text}</p>
             <div className="button-split">
@@ -266,7 +309,8 @@ export default function App() {
         ) : null}
 
         {!loading && flow && stage === "sent-message" ? (
-          <div className="stack">
+          <div className="stack response-layout">
+            <p className="eyebrow">Готово</p>
             <p className="result-title">{flow.settings.sent_message_title}</p>
             <p className="sent-meta">сообщение послано {sentTo}</p>
             <p className="thank-you">{flow.settings.sent_message_text}</p>
@@ -277,7 +321,8 @@ export default function App() {
         ) : null}
 
         {!loading && flow && stage === "done" ? (
-          <div className="stack">
+          <div className="stack response-layout">
+            <p className="eyebrow">Спасибо</p>
             <p className="result-title">{flow.settings.final_title}</p>
             <p className="thank-you">{flow.settings.thank_you_text}</p>
             <button type="button" className="primary-button" onClick={resetFlow}>
