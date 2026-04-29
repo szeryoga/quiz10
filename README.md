@@ -84,6 +84,30 @@ cp .env.example .env
 ./scripts/prod-stop.sh
 ```
 
+## Host Network Диагностика
+
+Если нужно быстро проверить, связана ли проблема исходящего трафика `backend` с docker networking, используйте временный override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.hostnet-test.yml up -d --build postgres backend_hostnet_test
+```
+
+Что делает этот режим:
+
+- публикует `postgres` на `127.0.0.1:15432`
+- запускает отдельный диагностический сервис `backend_hostnet_test` в `host` network
+- переводит этот сервис на работу с Postgres через `127.0.0.1:15432`
+- поднимает его на `127.0.0.1:18000`
+- основной сервис `backend` и основной route через gateway не трогает
+
+Проверка Telegram из этого режима:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.hostnet-test.yml exec -T backend_hostnet_test python -c "import os,urllib.request; token=os.environ['TELEGRAM_BOT_TOKEN']; url=f'https://api.telegram.org/bot{token}/getMe'; r=urllib.request.urlopen(url, timeout=10); print(r.status); print(r.read().decode())"
+```
+
+Если в `host` network Telegram начинает работать, проблема находится в bridge/NAT/network routing Docker, а не в коде `quiz10`.
+
 ## Gateway
 
 В `gateway/config/routes.yml` должен быть домен:

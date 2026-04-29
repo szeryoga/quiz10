@@ -1,0 +1,40 @@
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${HOSTNET_POSTGRES_PORT:-15432}:5432"
+
+  backend_hostnet_test:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${HOSTNET_POSTGRES_PORT:-15432}/${POSTGRES_DB}
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: ${HOSTNET_POSTGRES_PORT:-15432}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS}
+      XAI_API_KEY: ${XAI_API_KEY}
+      XAI_MODEL: ${XAI_MODEL}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+    command: >
+      gunicorn app.main:app
+      -k uvicorn.workers.UvicornWorker
+      -w ${GUNICORN_WORKERS}
+      --timeout ${GUNICORN_TIMEOUT}
+      -b 127.0.0.1:${HOSTNET_BACKEND_PORT:-18000}
+    network_mode: host
