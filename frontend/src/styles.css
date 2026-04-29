@@ -487,6 +487,10 @@ h1 {
   text-align: center;
 }
 
+.result-main-title {
+  margin-top: -10px;
+}
+
 .result-summary {
   white-space: pre-line;
 }

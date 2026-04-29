@@ -259,8 +259,7 @@ export default function App() {
         {!loading && flow && stage === "result" && computedResult ? (
           <div className="stack response-layout">
             <div className="question-card response-card">
-              <p className="eyebrow">Вывод</p>
-              <p className="result-title">{computedResult.resultRange.title}</p>
+              <p className="result-title result-main-title">{computedResult.resultRange.title}</p>
               <p className="muted result-summary">{computedResult.resultRange.summary}</p>
             </div>
 
