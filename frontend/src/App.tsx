@@ -199,11 +199,6 @@ export default function App() {
 
             <div className="question-card question-prompt">
               <h1 className="question-title">{currentStageOneQuestion.text}</h1>
-              <small className="helper-text prompt-helper">
-                {currentStageOneQuestion.question_type === "multi_choice"
-                  ? "Можно выбрать несколько вариантов"
-                  : "Выберите один вариант"}
-              </small>
             </div>
 
             <div className="stack option-list" role="group" aria-label={currentStageOneQuestion.text}>
