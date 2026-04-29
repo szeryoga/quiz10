@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts index.html ./
 RUN npm install
 
+COPY public ./public
 COPY src ./src
 
 ARG VITE_API_BASE=/api

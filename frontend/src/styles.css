@@ -49,9 +49,7 @@ body,
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    linear-gradient(rgba(246, 242, 238, 0.62), rgba(246, 242, 238, 0.62)),
-    url("/images/background.png") center / cover no-repeat fixed;
+  background: #f6f2ee;
   color: var(--text-main);
 }
 
@@ -66,11 +64,28 @@ body::before {
 }
 
 .app-shell {
+  --scene-height: min(calc(100dvh - 32px), 980px);
+  --scene-width: calc(var(--scene-height) * 0.5628);
+  --card-width: min(calc(var(--scene-width) * 0.64), calc(100vw - 32px));
   position: relative;
   min-height: 100dvh;
   padding: 22px 16px 30px;
   display: grid;
   place-items: center;
+  overflow: hidden;
+}
+
+.app-shell::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--scene-width);
+  height: var(--scene-height);
+  transform: translate(-50%, -50%);
+  background: url("/app/images/background.png") center / 100% 100% no-repeat;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .app-shell::before {
@@ -87,17 +102,19 @@ body::before {
   transform: rotate(8deg);
   opacity: 0.9;
   pointer-events: none;
+  z-index: 1;
 }
 
 .card {
   position: relative;
-  width: min(100%, 430px);
-  padding: 20px 18px 18px;
+  z-index: 2;
+  width: var(--card-width);
+  padding: 24px 20px 22px;
   border-radius: 32px;
-  background: linear-gradient(180deg, rgba(255, 252, 249, 0.76), rgba(255, 251, 247, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .app-header {
