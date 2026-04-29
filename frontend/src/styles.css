@@ -148,7 +148,7 @@ body::before {
   width: 18px;
   height: 18px;
   border: 2px solid var(--lavender-deep);
-  border-radius: 50% 50% 45% 55%;
+  border-radius: 50%;
   position: relative;
 }
 
@@ -156,9 +156,7 @@ body::before {
   content: "";
   position: absolute;
   inset: 4px;
-  border-top: 2px solid var(--lavender-deep);
-  border-left: 2px solid transparent;
-  border-right: 2px solid transparent;
+  background: var(--lavender-deep);
   border-radius: 50%;
 }
 
