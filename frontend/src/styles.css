@@ -59,7 +59,7 @@ body::before {
 }
 
 .app-shell {
-  --scene-height: min(calc(100dvh - 32px), 980px);
+  --scene-height: min(calc((100dvh - 32px) * 1.05), 1029px);
   --scene-width: calc(var(--scene-height) * 0.5628);
   --card-width: min(calc(var(--scene-width) * 0.78), calc(100vw - 32px));
   position: relative;
