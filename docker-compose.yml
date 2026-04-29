@@ -61,8 +61,10 @@ services:
       retries: 5
     networks:
       default:
+        gw_priority: 100
         priority: 100
       gateway:
+        gw_priority: 0
         priority: 0
         aliases:
           - quiz10-backend
@@ -79,8 +81,10 @@ services:
         condition: service_healthy
     networks:
       default:
+        gw_priority: 100
         priority: 100
       gateway:
+        gw_priority: 0
         priority: 0
         aliases:
           - quiz10-frontend
@@ -97,8 +101,10 @@ services:
         condition: service_healthy
     networks:
       default:
+        gw_priority: 100
         priority: 100
       gateway:
+        gw_priority: 0
         priority: 0
         aliases:
           - quiz10-admin
