@@ -373,6 +373,8 @@ h1 {
   border: 0;
   box-shadow: none;
   padding: 0;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .prompt-helper {
