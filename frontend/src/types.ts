@@ -63,3 +63,8 @@ export type PublicFlow = {
   stage_one_questions: StageOneQuestion[];
   result_ranges: ResultRange[];
 };
+
+export type PublicBootstrap = PublicFlow & {
+  user_daily_remaining: number;
+  global_daily_remaining: number;
+};

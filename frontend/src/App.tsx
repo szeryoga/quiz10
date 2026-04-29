@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { api } from "./api";
 import { closeTelegramApp, getTelegramUser, prepareTelegram } from "./telegram";
@@ -26,11 +26,8 @@ export default function App() {
 
     async function load() {
       try {
-        const [flowData] = await Promise.all([
-          api.getFlow(),
-          api.registerOpen(telegramUser?.id ? String(telegramUser.id) : null),
-        ]);
-        setFlow(flowData);
+        const bootstrapData = await api.bootstrap(telegramUser?.id ? String(telegramUser.id) : null);
+        setFlow(bootstrapData);
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : "Ошибка загрузки");
       } finally {

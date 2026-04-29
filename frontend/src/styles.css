@@ -3,13 +3,7 @@
   src: url("/fonts/PlayfairDisplay.ttf") format("truetype");
   font-weight: 500 700;
   font-style: normal;
-}
-
-@font-face {
-  font-family: "Playfair Display";
-  src: url("/fonts/PlayfairDisplay-Italic.ttf") format("truetype");
-  font-weight: 500 700;
-  font-style: italic;
+  font-display: swap;
 }
 
 @font-face {
@@ -17,6 +11,7 @@
   src: url("/fonts/Inter-Regular.otf") format("opentype");
   font-weight: 400 700;
   font-style: normal;
+  font-display: swap;
 }
 
 :root {

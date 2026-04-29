@@ -1,4 +1,4 @@
-import type { PublicFlow } from "./types";
+import type { PublicBootstrap, PublicFlow } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
@@ -29,9 +29,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getFlow: () => request<PublicFlow>("/public/flow"),
-  registerOpen: (telegramId?: string | null) =>
-    request<{ success: boolean; user_daily_remaining: number; global_daily_remaining: number }>(
-      "/public/open",
+  bootstrap: (telegramId?: string | null) =>
+    request<PublicBootstrap>(
+      "/public/bootstrap",
       {
         method: "POST",
         body: JSON.stringify({ telegram_id: telegramId || null }),

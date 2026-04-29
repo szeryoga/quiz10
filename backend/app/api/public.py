@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from app.api.deps import DBSession
 from app.models.flow import ResultRange, StageOneQuestion, StageQuestionType, SurveySubmission
 from app.models.open_event import AppOpenEvent
-from app.schemas.flow import PublicFlowRead, SurveySubmissionCreate, SurveySubmissionResponse
+from app.schemas.flow import PublicBootstrapRead, PublicFlowRead, SurveySubmissionCreate, SurveySubmissionResponse
 from app.schemas.open_event import AppOpenRequest, AppOpenResponse
 from app.services.flow_service import get_flow_config
 from app.services.notify import send_notifications
@@ -31,14 +31,11 @@ def find_result_range(result_ranges: list[ResultRange], total_score: int) -> Res
     )
 
 
-@router.get("/flow", response_model=PublicFlowRead)
-def get_public_flow(db: DBSession) -> PublicFlowRead:
-    settings, stage_one_questions, result_ranges = get_flow_config(db)
-    return PublicFlowRead(settings=settings, stage_one_questions=stage_one_questions, result_ranges=result_ranges)
-
-
-@router.post("/open", response_model=AppOpenResponse)
-def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> AppOpenResponse:
+def register_open_event(
+    telegram_id: str | None,
+    request: Request,
+    db: DBSession,
+) -> tuple[int, int]:
     settings = get_or_create_settings(db)
     from_dt = start_of_day_utc()
 
@@ -49,10 +46,10 @@ def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> A
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Дневной лимит открытий исчерпан")
 
     user_count = 0
-    if payload.telegram_id:
+    if telegram_id:
         user_count = db.scalar(
             select(func.count(AppOpenEvent.id)).where(
-                AppOpenEvent.telegram_id == payload.telegram_id,
+                AppOpenEvent.telegram_id == telegram_id,
                 AppOpenEvent.created_at >= from_dt,
             )
         ) or 0
@@ -64,17 +61,45 @@ def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> A
 
     db.add(
         AppOpenEvent(
-            telegram_id=payload.telegram_id,
+            telegram_id=telegram_id,
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
         )
     )
     db.commit()
 
+    return (
+        max(settings.user_daily_open_limit - user_count - 1, 0),
+        max(settings.global_daily_open_limit - global_count - 1, 0),
+    )
+
+
+@router.get("/flow", response_model=PublicFlowRead)
+def get_public_flow(db: DBSession) -> PublicFlowRead:
+    settings, stage_one_questions, result_ranges = get_flow_config(db)
+    return PublicFlowRead(settings=settings, stage_one_questions=stage_one_questions, result_ranges=result_ranges)
+
+
+@router.post("/bootstrap", response_model=PublicBootstrapRead)
+def bootstrap_public_flow(payload: AppOpenRequest, request: Request, db: DBSession) -> PublicBootstrapRead:
+    user_daily_remaining, global_daily_remaining = register_open_event(payload.telegram_id, request, db)
+    settings, stage_one_questions, result_ranges = get_flow_config(db)
+    return PublicBootstrapRead(
+        settings=settings,
+        stage_one_questions=stage_one_questions,
+        result_ranges=result_ranges,
+        user_daily_remaining=user_daily_remaining,
+        global_daily_remaining=global_daily_remaining,
+    )
+
+
+@router.post("/open", response_model=AppOpenResponse)
+def register_open(payload: AppOpenRequest, request: Request, db: DBSession) -> AppOpenResponse:
+    user_daily_remaining, global_daily_remaining = register_open_event(payload.telegram_id, request, db)
     return AppOpenResponse(
         success=True,
-        user_daily_remaining=max(settings.user_daily_open_limit - user_count - 1, 0),
-        global_daily_remaining=max(settings.global_daily_open_limit - global_count - 1, 0),
+        user_daily_remaining=user_daily_remaining,
+        global_daily_remaining=global_daily_remaining,
     )
 
 

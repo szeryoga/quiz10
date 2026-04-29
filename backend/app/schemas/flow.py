@@ -45,6 +45,11 @@ class PublicFlowRead(BaseModel):
     result_ranges: list[ResultRangeRead]
 
 
+class PublicBootstrapRead(PublicFlowRead):
+    user_daily_remaining: int
+    global_daily_remaining: int
+
+
 class StageOneOptionInput(BaseModel):
     text: str
     score: int
