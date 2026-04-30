@@ -189,6 +189,7 @@ def ensure_schema_compatibility() -> None:
                         NULLIF(sent_message_text, ''),
                         'Спасибо! Я получила твои ответы, скоро свяжусь с тобой'
                     ),
+                    admin_email = NULLIF(admin_email, ''),
                     final_title = COALESCE(NULLIF(final_title, ''), 'Спасибо за ответы!'),
                     final_button_text = COALESCE(NULLIF(final_button_text, ''), 'Пройти заново')
                 """

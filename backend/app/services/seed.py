@@ -1,7 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
 from app.models.flow import ResultOpenQuestion, ResultRange, StageOneOption, StageOneQuestion, StageQuestionType
 from app.models.settings import AppSettings
 
@@ -126,7 +125,6 @@ RESULT_RANGE_SEED = [
 
 
 def seed_initial_data(db: Session) -> None:
-    settings_env = get_settings()
     settings_row = db.scalar(select(AppSettings).where(AppSettings.id == 1))
     if not settings_row:
         db.add(
@@ -151,8 +149,6 @@ def seed_initial_data(db: Session) -> None:
                 final_button_text="Пройти заново",
                 user_daily_open_limit=100,
                 global_daily_open_limit=100,
-                xai_api_key=settings_env.xai_api_key or None,
-                xai_model=settings_env.xai_model or "grok-2-latest",
             )
         )
         db.commit()

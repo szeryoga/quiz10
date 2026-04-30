@@ -93,12 +93,6 @@ export default function App() {
   async function submitFlow() {
     if (!flow || !computedResult) return;
     const telegramUser = getTelegramUser();
-    if (!telegramUser) {
-      const message = "Посылка сообщения возможна только из Телеграм";
-      setError(message);
-      window.alert(message);
-      return;
-    }
     setSubmitting(true);
     setError(null);
     try {

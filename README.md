@@ -35,11 +35,8 @@ cp .env.example .env
 - `ADMIN_PASSWORD`
 - `JWT_SECRET`
 
-Опционально для ИИ и уведомлений:
+Опционально для уведомлений:
 
-- `XAI_API_KEY`
-- `XAI_MODEL`
-- `TELEGRAM_BOT_TOKEN`
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_USER`
@@ -108,9 +105,6 @@ cp .env.example .env
 2. В настройках Mini App укажите URL:
    `https://quiz10.etalonfood.com/app`
 3. Убедитесь, что домен доступен по HTTPS.
-4. Если нужен Telegram admin notify, задайте:
-   - `TELEGRAM_BOT_TOKEN`
-   - `admin_telegram_chat_id` в админке
 
 ## Что делает backend
 
@@ -118,8 +112,7 @@ cp .env.example .env
 - сидит 3 стартовые темы по 10 вопросов
 - считает лимиты открытий
 - сохраняет отправки пользователей
-- пытается анализировать ответы через xAI/Grok
-- уведомляет админа в Telegram и/или email
+- отправляет запрос пользователя администратору по email через SMTP
 
 ## Админка
 

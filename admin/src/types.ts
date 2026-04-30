@@ -42,11 +42,8 @@ export type FlowSettings = {
   thank_you_text: string;
   final_button_text: string;
   admin_email: string | null;
-  admin_telegram_chat_id: string | null;
   user_daily_open_limit: number;
   global_daily_open_limit: number;
-  xai_api_key: string | null;
-  xai_model: string;
   created_at?: string;
   updated_at?: string;
 };

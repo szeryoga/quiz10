@@ -1,7 +1,8 @@
 import logging
+import smtplib
+from email.message import EmailMessage
 
-import httpx
-
+from app.core.config import get_settings
 from app.models.flow import SurveySubmission
 from app.models.settings import AppSettings
 
@@ -34,24 +35,35 @@ def build_admin_message(submission: SurveySubmission) -> str:
 
 async def send_notifications(settings_row: AppSettings, submission: SurveySubmission) -> str:
     message = build_admin_message(submission)
-    return await send_telegram(settings_row, message)
+    return await send_email(settings_row, message)
 
 
-async def send_telegram(settings_row: AppSettings, message: str) -> str:
-    from app.core.config import get_settings
-
+async def send_email(settings_row: AppSettings, message: str) -> str:
     settings = get_settings()
-    if not settings_row.admin_telegram_chat_id or not settings.telegram_bot_token:
-        raise RuntimeError("У администратора не настроен Telegram для получения сообщений")
+    if not settings_row.admin_email:
+        raise RuntimeError("У администратора не настроен email для получения сообщений")
+    if not settings.smtp_host or not settings.smtp_from:
+        raise RuntimeError("На сервере не настроена SMTP-отправка")
 
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post(
-                f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
-                json={"chat_id": settings_row.admin_telegram_chat_id, "text": message},
-            )
-            response.raise_for_status()
-        return settings_row.admin_telegram_chat_id
+        email = EmailMessage()
+        email["Subject"] = "Новый запрос из Quiz10"
+        email["From"] = settings.smtp_from
+        email["To"] = settings_row.admin_email
+        email.set_content(message)
+
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port or 587, timeout=20) as server:
+            server.ehlo()
+            try:
+                server.starttls()
+                server.ehlo()
+            except smtplib.SMTPException:
+                logger.info("SMTP server does not support STARTTLS, continuing without it")
+            if settings.smtp_user:
+                server.login(settings.smtp_user, settings.smtp_password)
+            server.send_message(email)
+
+        return settings_row.admin_email
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Telegram notification failed: %s", exc)
-        raise RuntimeError("Не удалось отправить сообщение в Telegram") from exc
+        logger.exception("Email notification failed: %s", exc)
+        raise RuntimeError("Не удалось отправить сообщение по email") from exc

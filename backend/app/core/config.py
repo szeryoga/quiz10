@@ -15,10 +15,6 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default="change_me_too")
     jwt_expire_hours: int = Field(default=24)
 
-    xai_api_key: str = Field(default="")
-    xai_model: str = Field(default="grok-2-latest")
-    telegram_bot_token: str = Field(default="")
-
     smtp_host: str = Field(default="")
     smtp_port: int | None = Field(default=587)
     smtp_user: str = Field(default="")

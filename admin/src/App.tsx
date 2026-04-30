@@ -722,13 +722,13 @@ function SettingsPage() {
       {flow ? (
         <div className="panel-card form-grid">
           <label>
-            Telegram администратора
+            Email администратора
             <input
-              value={flow.settings.admin_telegram_chat_id || ""}
+              value={flow.settings.admin_email || ""}
               onChange={(e) =>
                 setFlow({
                   ...flow,
-                  settings: { ...flow.settings, admin_telegram_chat_id: e.target.value || null },
+                  settings: { ...flow.settings, admin_email: e.target.value || null },
                 })
               }
             />

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 
-from app.schemas.common import TimestampRead
+from app.schemas.common import ORMModel, TimestampRead
 
 
 class AppSettingsRead(TimestampRead):
@@ -21,13 +21,10 @@ class AppSettingsRead(TimestampRead):
     sent_message_text: str
     final_title: str
     admin_email: EmailStr | None
-    admin_telegram_chat_id: str | None
     thank_you_text: str
     final_button_text: str
     user_daily_open_limit: int
     global_daily_open_limit: int
-    xai_api_key: str | None
-    xai_model: str
 
 
 class AppSettingsUpdate(BaseModel):
@@ -47,16 +44,13 @@ class AppSettingsUpdate(BaseModel):
     sent_message_text: str = "Спасибо! Я получила твои ответы, скоро свяжусь с тобой"
     final_title: str = "Спасибо за ответы!"
     admin_email: EmailStr | None = None
-    admin_telegram_chat_id: str | None = None
     thank_you_text: str
     final_button_text: str = "Пройти заново"
     user_daily_open_limit: int = 100
     global_daily_open_limit: int = 100
-    xai_api_key: str | None = None
-    xai_model: str = "grok-2-latest"
 
 
-class PublicSettingsRead(BaseModel):
+class PublicSettingsRead(ORMModel):
     app_title: str
     app_description: str
     brand_eyebrow: str

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.models.flow import StageQuestionType
 from app.schemas.common import ORMModel
-from app.schemas.settings import AppSettingsRead, AppSettingsUpdate
+from app.schemas.settings import AppSettingsRead, AppSettingsUpdate, PublicSettingsRead
 
 
 class StageOneOptionRead(ORMModel):
@@ -40,7 +40,7 @@ class ResultRangeRead(ORMModel):
 
 
 class PublicFlowRead(BaseModel):
-    settings: AppSettingsRead
+    settings: PublicSettingsRead
     stage_one_questions: list[StageOneQuestionRead]
     result_ranges: list[ResultRangeRead]
 
