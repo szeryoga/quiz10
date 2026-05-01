@@ -90,32 +90,10 @@ export default function App() {
     return (stageOneAnswers[question.id] ?? []).length > 0;
   }
 
-  async function submitFlow() {
-    if (!flow || !computedResult) return;
-    const telegramUser = getTelegramUser();
-    setSubmitting(true);
+  function submitFlow() {
     setError(null);
-    try {
-      const response = await api.submit({
-        telegram_id: telegramUser?.id ? String(telegramUser.id) : null,
-        username: telegramUser?.username ?? null,
-        first_name: telegramUser?.first_name ?? null,
-        last_name: telegramUser?.last_name ?? null,
-        request_help: true,
-        stage_one_answers: flow.stage_one_questions.map((question) => ({
-          question_id: question.id,
-          selected_option_ids: stageOneAnswers[question.id] ?? [],
-        })),
-      });
-      setSentTo(response.sent_to);
-      setStage("sent-message");
-    } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : "Ошибка отправки";
-      setError(message);
-      window.alert(message);
-    } finally {
-      setSubmitting(false);
-    }
+    setSentTo("");
+    setStage("done");
   }
 
   function closeApp() {
@@ -282,7 +260,7 @@ export default function App() {
                 type="button"
                 className="primary-button"
                 disabled={submitting}
-                onClick={() => void submitFlow()}
+                onClick={submitFlow}
               >
                 Да
               </button>
